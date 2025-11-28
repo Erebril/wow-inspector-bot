@@ -189,6 +189,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $charFaction = $profileData['faction']['name'] ?? 'Desconocida';
                 $charRealm = $profileData['realm']['name'] ?? $realmInput;
                 $equipItemLevel = $profileData['equipped_item_level'] ?? 'N/A';
+                $warcraftLogsUrl = "https://fresh.warcraftlogs.com/character/{$region}/{$charRealm}/{$charName}";
 
                 // Color from faction
                 if ($charFaction === 'Horde') {
@@ -203,6 +204,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                     ->setContent("Armory de **$charName**")
                     ->addEmbed([
                         'title' => "{$charName} - lvl {$charLevel} {$charRace} {$charClass} \n <{$guildName}> - {$charRealm} - ({$charFaction})",
+                        'url' => $warcraftLogsUrl,
                         'color' => $color,
                         'thumbnail' => ['url' => $thumbnailPath],
                         'fields' => [
@@ -216,6 +218,9 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                                 'value' => $statsString,
                                 'inline' => true
                             ]
+                        ],
+                        'footer' => [
+                            'text' => "Datos proporcionados por Blizzard API | Programado por Erebril",                            
                         ]
                     ]);
 
