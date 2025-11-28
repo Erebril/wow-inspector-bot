@@ -86,6 +86,14 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $thumbnailData = json_decode($thumbnailResponse->getBody(), true);
                 $thumbnailPath = $thumbnailData['assets'][0]['value'] ?? 'https://render.worldofwarcraft.com/classic-us/icons/56/inv_misc_questionmark.jpg';
                 
+                // --- LLAMADA D: PROFILE DATA ---
+                $profileUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}";
+                $profileResponse = $httpClient->get($profileUrl, [
+                    'headers' => $headers,
+                    'query' => ['namespace' => $namespace, 'locale' => $locale]
+                ]);
+                $profileData = json_decode($profileResponse->getBody(), true);
+
                 // --- PROCESAMIENTO DE DATOS ---
                 
                 // 1. Procesar Equipo
@@ -113,7 +121,31 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                             //agregar un emoticon de interrogacion gris
                             $itemsList .= "❓ ";
                         }
-                        $itemsList .= "- [$slot]: $itemName ($itemQuality, ReqLvl: $lvlrequiered)\n";
+                        //agrega un emoticon dependiendo de la calidad del item, circulos de colores gris para poor, blanco para common, verde para uncommon, azul para rare, morado para epic, naranja para legendary
+                        switch ($itemQuality) {
+                            case 'Poor':
+                                $itemsList .= "⚪ ";
+                                break;
+                            case 'Common':
+                                $itemsList .= "⚪ ";
+                                break;
+                            case 'Uncommon':
+                                $itemsList .= "🟢 ";
+                                break;
+                            case 'Rare':
+                                $itemsList .= "🔵 ";
+                                break;
+                            case 'Epic':
+                                $itemsList .= "🟣 ";
+                                break;
+                            case 'Legendary':
+                                $itemsList .= "🟠 ";
+                                break;
+                            default:
+                                $itemsList .= "⚪ ";
+                                break;
+                        }
+                        $itemsList .= "[$slot]: $itemName\n";
                     }
                 }
 
@@ -148,15 +180,34 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
 
 
                 // --- RESPUESTA ---
+
+                $charName = ucfirst($charName);
+                $guildName = $profileData['guild']['name'] ?? 'Sin guild';
+                $charRace = $profileData['race']['name'] ?? 'Desconocida';
+                $charClass = $profileData['character_class']['name'] ?? 'Desconocida';
+                $charLevel = $profileData['level'] ?? 'N/A';
+                $charFaction = $profileData['faction']['name'] ?? 'Desconocida';
+                $charRealm = $profileData['realm']['name'] ?? $realmInput;
+                $equipItemLevel = $profileData['equipped_item_level'] ?? 'N/A';
+
+                // Color from faction
+                if ($charFaction === 'Horde') {
+                    $color = 0xFF0000; // Rojo
+                } elseif ($charFaction === 'Alliance') {
+                    $color = 0x0000FF; // Azul
+                } else {
+                    $color = 0xAAAAAA; // Gris neutro
+                }
+
                 $builder = MessageBuilder::new()
-                    ->setContent("Reporte completo para **$charName**")
+                    ->setContent("Armory de **$charName**")
                     ->addEmbed([
-                        'title' => "{$charName} - {$realmInput}",
-                        'color' => 0xFFAA00,
+                        'title' => "{$charName} - lvl {$charLevel} {$charRace} {$charClass} \n <{$guildName}> - {$charRealm} - ({$charFaction})",
+                        'color' => $color,
                         'thumbnail' => ['url' => $thumbnailPath],
                         'fields' => [
                             [
-                                'name' => '📦 Equipamiento',
+                                'name' => "📦 Equipamiento (iLvl {$equipItemLevel})",
                                 'value' => $itemsList ?: "Sin equipo",
                                 'inline' => true
                             ],

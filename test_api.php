@@ -44,7 +44,7 @@ try {
     $accessToken = json_decode($tokenResponse->getBody())->access_token;
 
     // Construcción de la URL
-    $url = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/equipment";
+    $url = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}";
     
     echo "2. Consultando Blizzard...\n";
     echo "   URL: $url\n";
@@ -67,48 +67,9 @@ try {
     echo "---------------------------------\n";
 
     // guardar el archivo JSON para revisión manual
-    file_put_contents("{$charName}_{$realmSlug}_equipment.json", json_encode($data, JSON_PRETTY_PRINT));
+    file_put_contents("{$charName}_{$realmSlug}_profile.json", json_encode($data, JSON_PRETTY_PRINT));
     
-    // Aquí puedes procesar $data para calcular el GearScore o lo que necesites
-    //muestra una lista de los items con el siguiente formato [slot]: [item name] (item quiality: [quality])
-    foreach ($data['equipped_items'] as $item) {
-        if ((!isset($item['slot']['name']) || $item['slot']['name'] == 'Tabard' || $item['slot']['name'] == 'Shirt')) {
-            continue;
-        }
-        $slot = $item['slot']['name'];
-        $itemName = $item['name'];
-        $itemQuality = $item['quality']['name'];
-        $lvlrequiered = $item['requirements']['level']['value'] ?? 'N/A';
-        echo "- [$slot]: $itemName ($itemQuality - Lvl Req: $lvlrequiered)\n";
-    }
-
-    // imprime la suma de stats de todos los items equipados
-    $stats = [
-        'strength' => 0,
-        'agility' => 0,
-        'stamina' => 0,
-        'intellect' => 0,
-        'spirit' => 0,
-    ];
-    foreach ($data['equipped_items'] as $item) {
-        if (isset($item['stats'])) {
-            foreach ($item['stats'] as $stat) {
-                $statName = strtolower(str_replace(' ', '_', $stat['type']['name']));
-                if (isset($stats[$statName])) {
-                    $stats[$statName] += $stat['value'];
-                }
-            }
-        }
-    }
-    echo "\n📊 Suma de Stats Equipados:\n"
-       . "Fuerza: {$stats['strength']}\n"
-       . "Agilidad: {$stats['agility']}\n"
-       . "Aguante: {$stats['stamina']}\n"
-       . "Intelecto: {$stats['intellect']}\n"
-       . "Espíritu: {$stats['spirit']}\n";
-
-
-
+    echo "Datos guardados en: {$charName}_{$realmSlug}_profile.json\n";
     
 } catch (ClientException $e) {
     echo "\n❌ ERROR " . $e->getResponse()->getStatusCode() . "\n";
