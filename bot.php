@@ -45,7 +45,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $blizzardClientSecret = $_ENV['BLIZZARD_SECRET'];
                 
                 $region = 'us';
-                $namespace = 'profile-classic1x-us'; // Anniversary
+                $namespace = 'profile-classic-us'; // Anniversary
                 $locale = 'en_US';
 
                 $charName = strtolower($interaction->data->options['nombre']->value);
