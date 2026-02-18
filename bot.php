@@ -45,7 +45,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $blizzardClientSecret = $_ENV['BLIZZARD_SECRET'];
                 
                 $region = 'us';
-                $namespace = 'profile-classic-us'; // Anniversary
+                $namespace = 'profile-classicann-us'; // Anniversary
                 $locale = 'en_US';
 
                 $charName = strtolower($interaction->data->options['nombre']->value);
@@ -78,14 +78,14 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $statsData = json_decode($statsResponse->getBody(), true);
 
                 // --- LLAMADA C: THUMBNAIL (NUEVO) ---
-                // $thumbnailUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/character-media";
-                // $thumbnailResponse = $httpClient->get($thumbnailUrl, [
-                //     'headers' => $headers,
-                //     'query' => ['namespace' => $namespace, 'locale' => $locale]
-                // ]);
-                // $thumbnailData = json_decode($thumbnailResponse->getBody(), true);
-                // $thumbnailPath = $thumbnailData['assets'][0]['value'] ?? 'https://render.worldofwarcraft.com/classic-us/icons/56/inv_misc_questionmark.jpg';
-                $thumbnailPath = "https://render.worldofwarcraft.com/classic-us/icons/56/inv_misc_questionmark.jpg";
+                $thumbnailUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/character-media";
+                $thumbnailResponse = $httpClient->get($thumbnailUrl, [
+                    'headers' => $headers,
+                    'query' => ['namespace' => $namespace, 'locale' => $locale]
+                ]);
+                $thumbnailData = json_decode($thumbnailResponse->getBody(), true);
+                $thumbnailPath = $thumbnailData['assets'][0]['value'] ?? 'https://render.worldofwarcraft.com/classic-us/icons/56/inv_misc_questionmark.jpg';
+                // $thumbnailPath = "https://render.worldofwarcraft.com/classic-us/icons/56/inv_misc_questionmark.jpg";
                 // --- LLAMADA D: PROFILE DATA ---
                 $profileUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}";
                 $profileResponse = $httpClient->get($profileUrl, [
