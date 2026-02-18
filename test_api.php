@@ -15,7 +15,7 @@ $region = 'us';
 
 // Tu corrección aplicada aquí:
 // Nota: Si cambias a region 'eu', esto debería ser 'profile-classic1x-eu'
-$namespace = "profile-classic-{$region}";
+$namespace = "profile-classicann-{$region}";
 
 $locale = 'en_US'; // Si es EU, a veces conviene probar 'en_GB' o 'es_ES'
 // -------------------------------
