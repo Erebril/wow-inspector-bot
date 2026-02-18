@@ -108,11 +108,11 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                         $itemName = $item['name'];
                         $itemQuality = $item['quality']['name'];
                         $lvlrequiered = $item['requirements']['level']['value'] ?? 'N/A';
-                        //agrega un emoticon dependiendo del $levelrequiered, un check verde si es lvl 60 o mas, un signo de exclamacion amarillo si es entre 50 y 59, y una cruz roja si es menor a 50, si no tiene item lvl requerido, no agrega emoticon
+                        //agrega un emoticon dependiendo del $levelrequiered, un check verde si es lvl 70 o mas, un signo de exclamacion amarillo si es entre 66 y 69, y una cruz roja si es menor a 66, si no tiene item lvl requerido, no agrega emoticon
                         if ($lvlrequiered !== 'N/A') {
-                            if ($lvlrequiered >= 60) {
+                            if ($lvlrequiered >= 70) {
                                 $itemsList .= "✅ ";
-                            } elseif ($lvlrequiered >= 50) {
+                            } elseif ($lvlrequiered >= 66) {
                                 $itemsList .= "⚠️ ";
                             } else {
                                 $itemsList .= "❌ ";
