@@ -1,6 +1,8 @@
 <?php
 
 include __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/GearScoreCalculator.php';
+require_once __DIR__ . '/ItemCacheManager.php';
 
 use Discord\Discord;
 use Discord\Parts\Interactions\Interaction;
@@ -43,7 +45,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 // --- CONFIGURACIÓN ---
                 $blizzardClientId = $_ENV['BLIZZARD_CLIENT_ID'];
                 $blizzardClientSecret = $_ENV['BLIZZARD_SECRET'];
-                
+
                 $region = 'us';
                 $namespace = 'profile-classicann-us'; // Anniversary
                 $locale = 'en_US';
@@ -68,6 +70,48 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                     'query' => ['namespace' => $namespace, 'locale' => $locale]
                 ]);
                 $equipData = json_decode($equipResponse->getBody(), true);
+
+                // ... (Después de obtener $accessToken y $headers) ...
+
+                $cache = new ItemCacheManager();
+                $totalGearScore = 0;
+                $items = $equipData['equipped_items'] ?? [];
+
+                foreach ($items as $item) {
+                    $itemId = $item['item']['id'];
+
+                    // 1. Intentar obtener de la caché local
+                    $cachedItem = $cache->getItem($itemId);
+
+                    if ($cachedItem) {
+                        $iLvl = $cachedItem['level'];
+                        $quality = $cachedItem['quality'];
+                        $invType = $cachedItem['inventory_type'];
+                    } else {
+                        // 2. Si no existe, consultar Blizzard Data API
+                        $itemDataUrl = "https://{$region}.api.blizzard.com/data/wow/item/{$itemId}";
+                        $itemResponse = $httpClient->get($itemDataUrl, [
+                            'headers' => $headers,
+                            'query' => ['namespace' => "static-classicann-us", 'locale' => $locale]
+                        ]);
+
+                        $itemDetail = json_decode($itemResponse->getBody(), true);
+                        $iLvl = $itemDetail['level'] ?? 0;
+                        $quality = $itemDetail['quality']['type'] ?? 'COMMON';
+                        $invType = $itemDetail['inventory_type']['type'] ?? 'NON_EQUIP';
+
+                        // 3. Guardar en caché para la próxima vez
+                        $cache->saveItem($itemId, $itemDetail);
+                        echo "💾 Objeto {$itemDetail['name']} guardado en caché.\n";
+                    }
+
+                    // 4. Calcular usando la lógica de TacoTip
+                    $itemScore = GearScoreCalculator::calculateItemScore($iLvl, $quality, $invType);
+                    $totalGearScore += $itemScore;
+                }
+
+                $totalGearScore = floor($totalGearScore);
+                $tierInfo = GearScoreCalculator::getTierInfo($totalGearScore);
 
                 // --- LLAMADA B: ESTADÍSTICAS (NUEVO) ---
                 $statsUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/statistics";
@@ -95,9 +139,8 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $profileData = json_decode($profileResponse->getBody(), true);
 
                 // --- PROCESAMIENTO DE DATOS ---
-                
+
                 // 1. Procesar Equipo
-                // $totalIlvl = 0;
                 $itemsList = "";
                 if (isset($equipData['equipped_items'])) {
                     foreach ($equipData['equipped_items'] as $item) {
@@ -154,7 +197,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $hp = $statsData['health'] ?? 0;
                 $powerType = $statsData['power_type']['name'] ?? 'Power';
                 $power = $statsData['power'] ?? 0;
-                
+
                 $str = $statsData['strength']['effective'] ?? 0;
                 $agi = $statsData['agility']['effective'] ?? 0;
                 $sta = $statsData['stamina']['effective'] ?? 0;
@@ -189,6 +232,8 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 $charFaction = $profileData['faction']['name'] ?? 'Desconocida';
                 $charRealm = $profileData['realm']['name'] ?? $realmInput;
                 $equipItemLevel = $profileData['equipped_item_level'] ?? 'N/A';
+                $gearScore = $totalGearScore;
+                $gearTier = $tierInfo['tier'];
                 $warcraftLogsUrl = "https://fresh.warcraftlogs.com/character/{$region}/{$charRealm}/{$charName}";
 
                 // Color from faction
@@ -201,13 +246,18 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                 }
 
                 $builder = MessageBuilder::new()
-                    ->setContent("Armory de **$charName**")
+                    ->setContent("Reporte de **$charName**")
                     ->addEmbed([
-                        'title' => "{$charName} - lvl {$charLevel} {$charRace} {$charClass} \n <{$guildName}> - {$charRealm} - ({$charFaction})",
+                        'title' => "{$charName} - lvl {$charLevel} {$charRace} {$charClass} \n <{$guildName}> - {$charRealm} - ({$charFaction})",                        
                         'url' => $warcraftLogsUrl,
                         'color' => $color,
                         'thumbnail' => ['url' => $thumbnailPath],
                         'fields' => [
+                            //Gear Score y Tier
+                            [
+                                'name' => "🏅 Gear Score: {$gearScore} ({$gearTier})",                                
+                                'inline' => false
+                            ],
                             [
                                 'name' => "📦 Equipamiento (iLvl {$equipItemLevel})",
                                 'value' => $itemsList ?: "Sin equipo",
@@ -220,21 +270,19 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                             ]
                         ],
                         'footer' => [
-                            'text' => "Datos proporcionados por Blizzard API | Programado por Erebril",                            
+                            'text' => "Datos proporcionados por Blizzard API | Programado por Erebril",
                         ]
                     ]);
 
                 $interaction->updateOriginalResponse($builder);
-
             } catch (\Exception $e) {
                 // ... Tu manejo de errores anterior ...
                 $msg = "Error: " . $e->getMessage();
                 if (strpos($e->getMessage(), '404') !== false) {
-                   $msg = "❌ Error 404: No se encontraron datos. Puede ser que el personaje sea nivel muy bajo y no tenga estadísticas generadas aún en la API, o el nombre/reino esté mal.";
+                    $msg = "❌ Error 404: No se encontraron datos. Puede ser que el personaje sea nivel muy bajo y no tenga estadísticas generadas aún en la API, o el nombre/reino esté mal.";
                 }
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent($msg));
             }
-
         }, function ($e) {
             echo "❌ Error al intentar conectar con Discord (Acknowledge): " . $e->getMessage() . "\n";
         });
