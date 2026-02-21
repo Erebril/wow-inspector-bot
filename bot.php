@@ -255,7 +255,8 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                         'fields' => [
                             //Gear Score y Tier
                             [
-                                'name' => "🏅 Gear Score: {$gearScore} ({$gearTier})",                                
+                                'name' => "🏅 Gear Score",
+                                'value' => "**$gearScore** - $gearTier",
                                 'inline' => false
                             ],
                             [
