@@ -271,7 +271,7 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
                             ]
                         ],
                         'footer' => [
-                            'text' => "Datos proporcionados por Blizzard API | Programado por Erebril",
+                            'text' => "Datos proporcionados por Blizzard API | Programado por Erebril para <HATERS> Nightslayer - TBC Anniversary",
                         ]
                     ]);
 
