@@ -1,2 +1,3 @@
 /vendor
 .env
+items_db.json
