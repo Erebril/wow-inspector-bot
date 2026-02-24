@@ -15,30 +15,37 @@ class LogConsumablesCommand
             try {
                 $logUrl = $interaction->data->options['url']->value;
                 
-                // 1. Extraer el Report ID de la URL
-                // Ejemplo: https://www.warcraftlogs.com/reports/A1b2C3d4E5f6G7h8
                 preg_match('/reports\/([a-zA-Z0-9]+)/', $logUrl, $matches);
                 if (!$matches) {
-                    throw new \Exception("URL de log no válida. Asegúrate de que sea un enlace de WarcraftLogs.");
+                    throw new \Exception("URL de log no válida.");
                 }
                 $reportId = $matches[1];
 
                 $httpClient = new Client();
 
-                // 2. Obtener Token de WarcraftLogs
+                // 1. Obtener Token (Usando el método más compatible)
                 $tokenResponse = $httpClient->post("https://www.warcraftlogs.com/oauth/token", [
-                    'auth' => [$_ENV['WARCRAFTLOGS_CLIENT_ID'], $_ENV['WARCRAFTLOGS_CLIENT_SECRET']],
-                    'form_params' => ['grant_type' => 'client_credentials']
+                    'form_params' => [
+                        'grant_type'    => 'client_credentials',
+                        'client_id'     => $_ENV['WARCRAFTLOGS_CLIENT_ID'],
+                        'client_secret' => $_ENV['WARCRAFTLOGS_CLIENT_SECRET'],
+                    ]
                 ]);
                 $token = json_decode($tokenResponse->getBody())->access_token;
 
-                // 3. Query GraphQL para obtener consumibles (Buffs)
-                // Buscamos en el "table" de buffs del reporte completo
+                // 2. Query GraphQL: Pedimos los actores (personajes) y la tabla de buffs
                 $query = '
                 query($reportId: String!) {
                     reportData {
                         report(code: $reportId) {
                             title
+                            masterData {
+                                actors(type: "Player") {
+                                    id
+                                    name
+                                    subType
+                                }
+                            }
                             table(dataType: Buffs, startTime: 0, endTime: 9999999999999)
                         }
                     }
@@ -46,32 +53,35 @@ class LogConsumablesCommand
 
                 $response = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
                     'headers' => ['Authorization' => "Bearer $token"],
-                    'json' => [
-                        'query' => $query,
-                        'variables' => ['reportId' => $reportId]
-                    ]
+                    'json' => ['query' => $query, 'variables' => ['reportId' => $reportId]]
                 ]);
 
                 $data = json_decode($response->getBody(), true);
                 $report = $data['data']['reportData']['report'];
-                $buffs = $report['table']['data']['auras'] ?? [];
+                $actors = $report['masterData']['actors'];
+                $auras = $report['table']['data']['auras'] ?? [];
 
-                // 4. Filtrar Flasks y Elixires de TBC
-                $reportSummary = self::processConsumables($buffs);
+                // 3. Procesar y Cruzar Datos
+                $reponseData = self::analyzeConsumables($actors, $auras);
 
+                // 4. Construir Embed
                 $embed = [
-                    'title' => "Consumibles: " . $report['title'],
+                    'title' => "Análisis de Consumibles: " . $report['title'],
                     'url' => $logUrl,
-                    'color' => 0x00ff00,
-                    'description' => "Resumen de Flasks y Elixires detectados en el log:",
+                    'color' => 0x3498db,
                     'fields' => [
                         [
-                            'name' => "🧪 Jugadores con Flask/Elixires",
-                            'value' => $reportSummary ?: "No se detectaron consumibles típicos.",
+                            'name' => "✅ Con Flask o Elixires",
+                            'value' => $reponseData['with_buffs'] ?: "Nadie.",
+                            'inline' => false
+                        ],
+                        [
+                            'name' => "❌ SIN CONSUMIBLES",
+                            'value' => $reponseData['without_buffs'] ?: "¡Todos van full!",
                             'inline' => false
                         ]
                     ],
-                    'footer' => ['text' => "WarcraftLogs API v2 | TBC Anniversary"]
+                    'footer' => ['text' => "TBC Anniversary - WarcraftLogs"]
                 ];
 
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
@@ -82,39 +92,59 @@ class LogConsumablesCommand
         });
     }
 
-    private static function processConsumables($auras)
+    private static function analyzeConsumables($actors, $auras)
     {
-        $players = [];
-
-        // IDs de ejemplo de TBC (Flasks y Elixires comunes)
-        // Puedes ampliar esta lista con los IDs exactos de TBC
-        $consumableIds = [
-            28518 => "Flask of Relentless Assault",
-            28519 => "Flask of Blinding Light",
-            28520 => "Flask of Pure Death",
-            28521 => "Flask of Mighty Restoration",
-            28540 => "Flask of Fortification",
-            // Elixires (Battle/Guardian)
-            28497 => "Elixir of Greater Agility",
-            28491 => "Healing Elixir",
-            // ... añadir más según sea necesario
+        // Diccionario de IDs de TBC (Flasks y Elixires)
+        $ids = [
+            // Flasks
+            28518 => "Relentless Assault", 28519 => "Blinding Light", 
+            28520 => "Pure Death", 28521 => "Mighty Restoration", 28540 => "Fortification",
+            // Elixires de Batalla
+            28497 => "G. Agility", 28493 => "Major Mageblood", 28503 => "Major Shadow",
+            28501 => "Major Fire", 28491 => "Healing", 28488 => "Major Conf.",
+            // Elixires Guardianes
+            28509 => "G. Defense", 28514 => "Empowerment", 28502 => "Major Armor"
         ];
 
+        $playerConsumes = [];
+        // Inicializamos a todos los jugadores como "sin consumibles"
+        foreach ($actors as $player) {
+            $playerConsumes[$player['id']] = [
+                'name' => $player['name'],
+                'buffs' => []
+            ];
+        }
+
+        // Mapeamos los bufos encontrados a los jugadores
         foreach ($auras as $aura) {
-            if (isset($consumableIds[$aura['guid']])) {
+            if (isset($ids[$aura['guid']])) {
                 foreach ($aura['bands'] as $band) {
-                    // Aquí simplificamos: si el jugador aparece en el aura, lo contamos
-                    // En un sistema real, podrías calcular el % de uptime
-                    $playerName = $aura['name'] . " (" . $consumableIds[$aura['guid']] . ")";
-                    
-                    // Nota: WarcraftLogs devuelve quién tuvo el bufo en 'bands'
-                    // Para este ejemplo, listaremos los consumibles activos encontrados
+                    // WarcraftLogs asocia el aura a los IDs de los actores
+                    // Buscamos a qué jugadores pertenece esta aura
+                    foreach ($aura['type'] === 'Buff' ? ($aura['sourceIDs'] ?? []) : [] as $sourceId) {
+                        if (isset($playerConsumes[$sourceId])) {
+                            $playerConsumes[$sourceId]['buffs'][] = $ids[$aura['guid']];
+                        }
+                    }
                 }
-                $players[] = "• **" . $aura['name'] . "**";
             }
         }
 
-        // Eliminamos duplicados y unimos
-        return implode("\n", array_unique($players));
+        $with = "";
+        $without = "";
+
+        foreach ($playerConsumes as $p) {
+            if (!empty($p['buffs'])) {
+                $buffList = implode(", ", array_unique($p['buffs']));
+                $with .= "• **{$p['name']}**: `{$buffList}`\n";
+            } else {
+                $without .= "• **{$p['name']}**\n";
+            }
+        }
+
+        return [
+            'with_buffs' => $with,
+            'without_buffs' => $without
+        ];
     }
 }
