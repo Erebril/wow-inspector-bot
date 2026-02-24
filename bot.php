@@ -15,6 +15,7 @@ use Discord\WebSockets\Intents;
 use Discord\WebSockets\Event;
 use Dotenv\Dotenv;
 use App\Commands\GearScoreCommand; // Importamos el namespace del comando
+use App\Commands\LogConsumablesCommand;
 
 // 1. Cargar configuración de entorno
 $dotenv = Dotenv::createImmutable(__DIR__);
