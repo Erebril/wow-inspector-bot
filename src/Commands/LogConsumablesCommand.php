@@ -8,7 +8,6 @@ use GuzzleHttp\Client;
 
 class LogConsumablesCommand
 {
-    // IDs Corregidos y mapeados
     private static $tbcSpellIds = [
         28520 => "Flask: Relentless Assault",
         28540 => "Flask: Pure Death",
@@ -24,6 +23,7 @@ class LogConsumablesCommand
 
     public static function run(Interaction $interaction)
     {
+        // 1. Acknowledge inmediato para evitar el timeout de 3 segundos
         $interaction->acknowledgeWithResponse(true)->then(function () use ($interaction) {
             try {
                 $logUrl = $interaction->data->options['url']->value;
@@ -31,9 +31,9 @@ class LogConsumablesCommand
                 if (!$matches) throw new \Exception("URL de log no válida.");
                 $reportId = $matches[1];
 
-                $httpClient = new Client();
+                $httpClient = new Client(['timeout' => 30.0]); // Timeout extendido para Guzzle
 
-                // 1. Obtener Token
+                // 2. Obtener Token
                 $tokenResponse = $httpClient->post("https://www.warcraftlogs.com/oauth/token", [
                     'form_params' => [
                         'grant_type' => 'client_credentials',
@@ -43,80 +43,66 @@ class LogConsumablesCommand
                 ]);
                 $token = json_decode($tokenResponse->getBody())->access_token;
 
-                // 2. Obtener lista de jugadores primero
-                $masterQuery = 'query($reportId: String!) {
-                    reportData {
-                        report(code: $reportId) {
-                            title
-                            masterData { actors(type: "Player") { id name } }
-                        }
-                    }
-                }';
-
-                $masterRes = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
+                // 3. Obtener Actores (Jugadores)
+                $qActors = 'query($reportId: String!) { reportData { report(code: $reportId) { title masterData { actors(type: "Player") { id name } } } } }';
+                $resActors = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
                     'headers' => ['Authorization' => "Bearer $token"],
-                    'json' => ['query' => $masterQuery, 'variables' => ['reportId' => $reportId]]
+                    'json' => ['query' => $qActors, 'variables' => ['reportId' => $reportId]]
                 ]);
-                $masterData = json_decode($masterRes->getBody(), true);
-                $actors = $masterData['data']['reportData']['report']['masterData']['actors'];
+                $masterData = json_decode($resActors->getBody(), true)['data']['reportData']['report'];
                 
                 $playerResults = [];
-                foreach ($actors as $actor) {
+                foreach ($masterData['masterData']['actors'] as $actor) {
                     $playerResults[$actor['id']] = ['name' => $actor['name'], 'buffs' => []];
                 }
 
-                // 3. CONSULTAS POR AURA (El nuevo enfoque)
-                // Iteramos los IDs y pedimos la tabla filtrada por cada uno
+                // 4. Escaneo por AbilityID (Igual que en el test)
                 foreach (self::$tbcSpellIds as $spellId => $spellName) {
-                    $auraQuery = 'query($reportId: String!, $abilityId: Float!) {
-                        reportData {
-                            report(code: $reportId) {
-                                table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $abilityId)
-                            }
-                        }
+                    $qAura = 'query($reportId: String!, $abilityId: Float!) {
+                        reportData { report(code: $reportId) {
+                            table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $abilityId)
+                        } }
                     }';
 
-                    $auraRes = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
+                    $resAura = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
                         'headers' => ['Authorization' => "Bearer $token"],
                         'json' => [
-                            'query' => $auraQuery, 
+                            'query' => $qAura, 
                             'variables' => ['reportId' => $reportId, 'abilityId' => (float)$spellId]
                         ]
                     ]);
 
-                    $auraData = json_decode($auraRes->getBody(), true);
-                    $auras = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
+                    $auraData = json_decode($resAura->getBody(), true);
+                    $aurasEncontradas = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
 
-                    foreach ($auras as $aura) {
-                        // Al filtrar por abilityID, la API devuelve los sourceIDs en 'bands' o 'sourceIDs'
-                        $sources = $aura['sourceIDs'] ?? [];
-                        if (empty($sources) && isset($aura['bands'])) {
-                            foreach ($aura['bands'] as $band) {
-                                if (isset($band['sourceID'])) $sources[] = $band['sourceID'];
-                            }
-                        }
-
-                        foreach (array_unique($sources) as $sId) {
-                            if (isset($playerResults[$sId])) {
-                                $playerResults[$sId]['buffs'][] = $spellName;
-                            }
+                    foreach ($aurasEncontradas as $aura) {
+                        // LA CORRECCIÓN CLAVE: Usar el ID del objeto aura como ID del jugador
+                        $pId = $aura['id']; 
+                        if (isset($playerResults[$pId])) {
+                            $playerResults[$pId]['buffs'][] = $spellName;
                         }
                     }
                 }
 
-                // 4. Formatear resultados
+                // 5. Formatear resultados
                 $with = ""; $without = "";
                 foreach ($playerResults as $p) {
                     if (!empty($p['buffs'])) {
                         $b = implode(", ", array_unique($p['buffs']));
                         $with .= "• **{$p['name']}**: `{$b}`\n";
                     } else {
-                        if ($p['name'] !== "Multiple Players") $without .= "• **{$p['name']}**\n";
+                        if ($p['name'] !== "Multiple Players") {
+                            $without .= "• **{$p['name']}**\n";
+                        }
                     }
                 }
 
+                // Si el mensaje es muy largo, Discord lo rechazará (límite 4096 caracteres)
+                $with = strlen($with) > 1000 ? substr($with, 0, 1000) . "..." : $with;
+                $without = strlen($without) > 1000 ? substr($without, 0, 1000) . "..." : $without;
+
                 $embed = [
-                    'title' => "Consumibles: " . $masterData['data']['reportData']['report']['title'],
+                    'title' => "Consumibles: " . $masterData['title'],
                     'url' => $logUrl,
                     'color' => 0x2ecc71,
                     'fields' => [
@@ -128,6 +114,7 @@ class LogConsumablesCommand
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
 
             } catch (\Exception $e) {
+                // Si algo falla, al menos enviamos el error a Discord para saber qué pasó
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
             }
         });
