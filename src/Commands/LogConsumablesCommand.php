@@ -9,16 +9,23 @@ use GuzzleHttp\Client;
 class LogConsumablesCommand
 {
     private static $tbcSpellIds = [
-        28520 => "Flask: Relentless Assault",
-        28540 => "Flask: Pure Death",
-        28521 => "Flask: Blinding Light",
-        28519 => "Flask: Mighty Restoration",
-        28518 => "Flask: Fortification",
-        28491 => "Elixir: Healing Power",
-        28497 => "Elixir: G. Agility",
-        28503 => "Elixir: Major Shadow",
-        28501 => "Elixir: Major Fire",
-        28509 => "Elixir: G. Defense"
+        28520 => "🧪 Relentless Assault",
+        28540 => "🧪 Pure Death",
+        28521 => "🧪 Blinding Light",
+        28519 => "🧪 Mighty Restoration",
+        28518 => "🧪 Fortification",
+        28491 => "🧴 Healing Power",
+        28497 => "🧴 G. Agility",
+        28503 => "🧴 Major Shadow",
+        28501 => "🧴 Major Fire",
+        28502 => "🧴 M. Defense",
+        28509 => "🧴 G. Versatility",
+        39627 => "🧴 Draenic Wisdom",
+        33721 => "🧴 Adept",
+        39625 => "🧴 M. Fortitude",
+        11406 => "🧴 Demonslaying",
+        11371 => "⚠️ Gift of Arthas",
+        17538 => "⚠️ Mongoose",
     ];
 
     public static function run(Interaction $interaction)
@@ -58,17 +65,17 @@ class LogConsumablesCommand
                     'headers' => ['Authorization' => "Bearer $token"],
                     'json' => ['query' => $qPlayers, 'variables' => ['reportId' => $reportId]]
                 ]);
-                
+
                 $dataJson = json_decode($resPlayers->getBody(), true);
                 $report = $dataJson['data']['reportData']['report'];
-                
+
                 // Mapear quién participó de verdad
                 $activeIds = [];
                 // Sacar de la tabla de daño
                 foreach ($report['dps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
                 // Sacar de la tabla de sanación (para no olvidar healers)
                 foreach ($report['hps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
-                
+
                 $activeIds = array_unique($activeIds);
 
                 $playerResults = [];
@@ -103,8 +110,10 @@ class LogConsumablesCommand
                 }
 
                 // 4. Estadísticas y Formateo
-                $with = ""; $without = "";
-                $cWith = 0; $cWithout = 0;
+                $with = "";
+                $without = "";
+                $cWith = 0;
+                $cWithout = 0;
 
                 foreach ($playerResults as $p) {
                     if (!empty($p['buffs'])) {
@@ -122,9 +131,9 @@ class LogConsumablesCommand
                 $embed = [
                     'title' => "Reporte: " . $report['title'],
                     'description' => "📊 **Resumen de Raid:**\n" .
-                                     "Total Participantes: **{$total}**\n" .
-                                     "✅ Con consumibles: **{$cWith}**\n" .
-                                     "❌ Sin consumibles: **{$cWithout}**",
+                        "Total Participantes: **{$total}**\n" .
+                        "✅ Con consumibles: **{$cWith}**\n" .
+                        "❌ Sin consumibles: **{$cWithout}**",
                     'url' => $logUrl,
                     'color' => ($cWithout > 0) ? 0xe74c3c : 0x2ecc71,
                     'fields' => [
@@ -135,7 +144,6 @@ class LogConsumablesCommand
                 ];
 
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
-
             } catch (\Exception $e) {
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
                 //save error log

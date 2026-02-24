@@ -1,6 +1,7 @@
 <?php
 
 include __DIR__ . '/vendor/autoload.php';
+
 use Dotenv\Dotenv;
 use GuzzleHttp\Client;
 
@@ -13,16 +14,23 @@ preg_match('/reports\/([a-zA-Z0-9]+)/', $testUrl, $matches);
 $reportId = $matches[1];
 
 $tbcSpellIds = [
-    28520 => "Flask: Relentless Assault",
-    28540 => "Flask: Pure Death",
-    28521 => "Flask: Blinding Light",
-    28519 => "Flask: Mighty Restoration",
-    28518 => "Flask: Fortification",
-    28491 => "Elixir: Healing Power",
-    28497 => "Elixir: G. Agility",
-    28503 => "Elixir: Major Shadow",
-    28501 => "Elixir: Major Fire",
-    28509 => "Elixir: G. Defense"
+    28520 => "🧪 Relentless Assault",
+    28540 => "🧪 Pure Death",
+    28521 => "🧪 Blinding Light",
+    28519 => "🧪 Mighty Restoration",
+    28518 => "🧪 Fortification",
+    28491 => "🧴 Healing Power",
+    28497 => "🧴 G. Agility",
+    28503 => "🧴 Major Shadow",
+    28501 => "🧴 Major Fire",
+    28502 => "🧴 M. Defense",
+    28509 => "🧴 G. Versatility",
+    39627 => "🧴 Draenic Wisdom",
+    33721 => "🧴 Adept",
+    39625 => "🧴 M. Fortitude",
+    11406 => "🧴 Demonslaying",
+    11371 => "⚠️ Gift of Arthas",
+    17538 => "⚠️ Mongoose",
 ];
 
 try {
@@ -52,7 +60,7 @@ try {
         'headers' => ['Authorization' => "Bearer $token"],
         'json' => ['query' => $queryPlayers, 'variables' => ['reportId' => $reportId]]
     ]);
-    
+
     $dataJson = json_decode($resPlayers->getBody(), true);
     $report = $dataJson['data']['reportData']['report'];
 
@@ -96,8 +104,10 @@ try {
     }
 
     // 4. Mostrar Resultados y Resumen
-    $cWith = 0; $cWithout = 0;
-    $withText = ""; $withoutText = "";
+    $cWith = 0;
+    $cWithout = 0;
+    $withText = "";
+    $withoutText = "";
 
     foreach ($playerBuffs as $data) {
         if (!empty($data['buffs'])) {
@@ -114,11 +124,10 @@ try {
     echo "Total participantes: " . ($cWith + $cWithout) . "\n";
     echo "Con consumibles: $cWith\n";
     echo "Sin consumibles: $cWithout\n\n";
-    
+
     echo "DETALLE:\n";
     echo $withText;
     echo $withoutText;
-
 } catch (Exception $e) {
     echo "❌ ERROR: " . $e->getMessage() . "\n";
 }
