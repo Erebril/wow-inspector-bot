@@ -27,11 +27,8 @@ class LogConsumablesCommand
 
                 // 2. Obtener Token de WarcraftLogs
                 $tokenResponse = $httpClient->post("https://www.warcraftlogs.com/oauth/token", [
-                    'form_params' => [
-                        'grant_type'    => 'client_credentials',
-                        'client_id'     => $_ENV['WARCRAFTLOGS_CLIENT_ID'],
-                        'client_secret' => $_ENV['WARCRAFTLOGS_CLIENT_SECRET'],
-                    ]
+                    'auth' => [$_ENV['WARCRAFTLOGS_CLIENT_ID'], $_ENV['WARCRAFTLOGS_CLIENT_SECRET']],
+                    'form_params' => ['grant_type' => 'client_credentials']
                 ]);
                 $token = json_decode($tokenResponse->getBody())->access_token;
 
