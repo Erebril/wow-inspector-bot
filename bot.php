@@ -7,6 +7,7 @@ require_once __DIR__ . '/GearScoreCalculator.php';
 require_once __DIR__ . '/ItemCacheManager.php';
 // Cargamos el nuevo archivo de comando
 require_once __DIR__ . '/src/Commands/GearScoreCommand.php';
+require_once __DIR__ . '/src/Commands/LogConsumablesCommand.php';
 
 use Discord\Discord;
 use Discord\Parts\Interactions\Interaction;
@@ -41,9 +42,9 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
             break;
 
         // Aquí podrás añadir más casos fácilmente en el futuro
-        // case 'stats':
-        //     StatsCommand::run($interaction, $discord);
-        //     break;
+        case 'consumibles': // Nuevo comando
+            LogConsumablesCommand::run($interaction);
+            break;
 
         default:
             echo "❓ Comando no reconocido: {$interaction->data->name}\n";
