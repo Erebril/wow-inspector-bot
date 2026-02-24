@@ -39,6 +39,7 @@ class GearScoreCommand
         $locale = 'en_US';
 
         $charName = strtolower($interaction->data->options['nombre']->value);
+        $charName = urlencode($charName); // Asegura que caracteres especiales no rompan la URL
         $realmInput = $interaction->data->options['reino']->value ?? 'nightslayer';
         $realmSlug = strtolower(str_replace([' ', '\''], ['-', ''], $realmInput));
 
@@ -87,6 +88,7 @@ class GearScoreCommand
         $statsString = self::buildStatsString($statsData);
 
         // 5. Construir Respuesta
+        $charName = urldecode($charName); // Para mostrar el nombre con espacios y caracteres originales
         $builder = self::createEmbedBuilder(
             ucfirst($charName), $realmInput, $profileData, 
             floor($totalGearScore), $tierInfo['tier'], 
