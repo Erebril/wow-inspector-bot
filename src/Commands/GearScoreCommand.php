@@ -172,5 +172,7 @@ class GearScoreCommand
             ? "❌ Error 404: Personaje no encontrado o nivel demasiado bajo." 
             : "Error: " . $e->getMessage();
         $interaction->updateOriginalResponse(MessageBuilder::new()->setContent($msg));
+        //save error log
+        file_put_contents(__DIR__ . '/../../logs/gear_score_errors.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
     }
 }

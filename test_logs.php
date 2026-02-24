@@ -7,11 +7,11 @@ use GuzzleHttp\Client;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$testUrl = $argv[1] ?? 'https://fresh.warcraftlogs.com/reports/3ZvMtB42K9n1JAND';
+// URL de prueba
+$testUrl = $argv[1] ?? 'https://fresh.warcraftlogs.com/reports/Btw3kAXn2hxgZFHY';
 preg_match('/reports\/([a-zA-Z0-9]+)/', $testUrl, $matches);
 $reportId = $matches[1];
 
-// IDs Corregidos según tu lista
 $tbcSpellIds = [
     28520 => "Flask: Relentless Assault",
     28540 => "Flask: Pure Death",
@@ -26,7 +26,7 @@ $tbcSpellIds = [
 ];
 
 try {
-    $httpClient = new Client();
+    $httpClient = new Client(['timeout' => 45.0]);
     $tokenResponse = $httpClient->post("https://www.warcraftlogs.com/oauth/token", [
         'form_params' => [
             'grant_type' => 'client_credentials',
@@ -36,79 +36,88 @@ try {
     ]);
     $token = json_decode($tokenResponse->getBody())->access_token;
 
-    // 1. Obtener los Actores (Jugadores)
-    $qActors = 'query($reportId: String!) { reportData { report(code: $reportId) { masterData { actors(type: "Player") { id name } } } } }';
-    $resActors = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
-        'headers' => ['Authorization' => "Bearer $token"],
-        'json' => ['query' => $qActors, 'variables' => ['reportId' => $reportId]]
-    ]);
-    $actors = json_decode($resActors->getBody(), true)['data']['reportData']['report']['masterData']['actors'];
+    // 1. Obtener Actores y Tablas de actividad (DPS y Healers)
+    $queryPlayers = 'query($reportId: String!) { 
+        reportData { 
+            report(code: $reportId) { 
+                title 
+                masterData { actors(type: "Player") { id name } }
+                dps: table(dataType: DamageDone, startTime: 0, endTime: 9999999999999)
+                hps: table(dataType: Healing, startTime: 0, endTime: 9999999999999)
+            } 
+        } 
+    }';
 
-    $playerBuffs = [];
-    foreach ($actors as $a) {
-        $playerBuffs[$a['id']] = ['name' => $a['name'], 'buffs' => []];
+    $resPlayers = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
+        'headers' => ['Authorization' => "Bearer $token"],
+        'json' => ['query' => $queryPlayers, 'variables' => ['reportId' => $reportId]]
+    ]);
+    
+    $dataJson = json_decode($resPlayers->getBody(), true);
+    $report = $dataJson['data']['reportData']['report'];
+
+    // 2. Filtrar solo jugadores que pegaron o curaron
+    $activeIds = [];
+    foreach ($report['dps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
+    foreach ($report['hps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
+    $activeIds = array_unique($activeIds);
+
+    $playerBuffs = []; // <--- Definimos la variable correctamente aquí
+    foreach ($report['masterData']['actors'] as $actor) {
+        if (in_array($actor['id'], $activeIds)) {
+            $playerBuffs[$actor['id']] = ['name' => $actor['name'], 'buffs' => []];
+        }
     }
 
-    echo "🚀 Iniciando escaneo profundo por AbilityID...\n";
+    echo "🔍 Escaneando consumibles para " . count($playerBuffs) . " jugadores activos...\n";
 
-    // 2. Consultar cada Aura individualmente para obtener los sourceIDs
+    // 3. Consultar cada Aura
     foreach ($tbcSpellIds as $spellId => $spellName) {
-        echo "Consultando $spellName ($spellId)... ";
-
-        $query = 'query($reportId: String!, $ability: Float!) {
-            reportData {
-                report(code: $reportId) {
-                    table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $ability)
-                }
-            }
+        $qAura = 'query($reportId: String!, $ability: Float!) {
+            reportData { report(code: $reportId) {
+                table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $ability)
+            } }
         }';
 
-        $response = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
+        $resAura = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
             'headers' => ['Authorization' => "Bearer $token"],
-            'json' => [
-                'query' => $query,
-                'variables' => ['reportId' => $reportId, 'ability' => (float)$spellId]
-            ]
+            'json' => ['query' => $qAura, 'variables' => ['reportId' => $reportId, 'ability' => (float)$spellId]]
         ]);
 
-        $data = json_decode($response->getBody(), true);
-        //guardar el resultado completo para análisis
-        // file_put_contents("log_{$spellId}.json", json_encode($data, JSON_PRETTY_PRINT));
-        $auras = $data['data']['reportData']['report']['table']['data']['auras'] ?? [];
-        
-        $foundInThisAura = 0;
+        $auraData = json_decode($resAura->getBody(), true);
+        $auras = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
+
         foreach ($auras as $aura) {
-            // EXPLICACIÓN: En esta query, $aura['id'] es el ID del JUGADOR
-            // y $aura['name'] es el nombre del JUGADOR.
-            $playerId = $aura['id'] ?? null;
-
-            if ($playerId && isset($playerBuffs[$playerId])) {
-                $playerBuffs[$playerId]['buffs'][] = $spellName;
-                $foundInThisAura++;
+            $pId = $aura['id']; // El ID del jugador en esta vista
+            if (isset($playerBuffs[$pId])) {
+                $playerBuffs[$pId]['buffs'][] = $spellName;
             }
         }
-        echo "[$foundInThisAura encontrados]\n";
     }
 
-    // 3. Mostrar Resultados
-    echo "\n📊 RESULTADOS DEL LOG:\n";
-    echo "------------------------------------------\n";
-    
-    $with = "";
-    $without = "";
+    // 4. Mostrar Resultados y Resumen
+    $cWith = 0; $cWithout = 0;
+    $withText = ""; $withoutText = "";
 
-    foreach ($playerBuffs as $id => $data) {
+    foreach ($playerBuffs as $data) {
         if (!empty($data['buffs'])) {
-            $with .= "✅ {$data['name']}: " . implode(", ", array_unique($data['buffs'])) . "\n";
+            $cWith++;
+            $withText .= "✅ {$data['name']}: " . implode(", ", array_unique($data['buffs'])) . "\n";
         } else {
-            if ($data['name'] !== "Multiple Players") {
-                $without .= "❌ {$data['name']}\n";
-            }
+            $cWithout++;
+            $withoutText .= "❌ {$data['name']}\n";
         }
     }
 
-    echo "CON CONSUMIBLES:\n$with";
-    echo "\nSIN CONSUMIBLES:\n$without";
+    echo "\n📊 RESUMEN DE LA RAID\n";
+    echo "------------------------------------------\n";
+    echo "Total participantes: " . ($cWith + $cWithout) . "\n";
+    echo "Con consumibles: $cWith\n";
+    echo "Sin consumibles: $cWithout\n\n";
+    
+    echo "DETALLE:\n";
+    echo $withText;
+    echo $withoutText;
 
 } catch (Exception $e) {
     echo "❌ ERROR: " . $e->getMessage() . "\n";

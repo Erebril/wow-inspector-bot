@@ -23,7 +23,6 @@ class LogConsumablesCommand
 
     public static function run(Interaction $interaction)
     {
-        // 1. Acknowledge inmediato para evitar el timeout de 3 segundos
         $interaction->acknowledgeWithResponse(true)->then(function () use ($interaction) {
             try {
                 $logUrl = $interaction->data->options['url']->value;
@@ -31,9 +30,9 @@ class LogConsumablesCommand
                 if (!$matches) throw new \Exception("URL de log no válida.");
                 $reportId = $matches[1];
 
-                $httpClient = new Client(['timeout' => 30.0]); // Timeout extendido para Guzzle
+                $httpClient = new Client(['timeout' => 45.0]);
 
-                // 2. Obtener Token
+                // 1. Token
                 $tokenResponse = $httpClient->post("https://www.warcraftlogs.com/oauth/token", [
                     'form_params' => [
                         'grant_type' => 'client_credentials',
@@ -43,20 +42,43 @@ class LogConsumablesCommand
                 ]);
                 $token = json_decode($tokenResponse->getBody())->access_token;
 
-                // 3. Obtener Actores (Jugadores)
-                $qActors = 'query($reportId: String!) { reportData { report(code: $reportId) { title masterData { actors(type: "Player") { id name } } } } }';
-                $resActors = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
+                // 2. Obtener Participantes Reales (DPS + Healers)
+                $qPlayers = 'query($reportId: String!) { 
+                    reportData { 
+                        report(code: $reportId) { 
+                            title 
+                            masterData { actors(type: "Player") { id name } }
+                            dps: table(dataType: DamageDone, startTime: 0, endTime: 9999999999999)
+                            hps: table(dataType: Healing, startTime: 0, endTime: 9999999999999)
+                        } 
+                    } 
+                }';
+
+                $resPlayers = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
                     'headers' => ['Authorization' => "Bearer $token"],
-                    'json' => ['query' => $qActors, 'variables' => ['reportId' => $reportId]]
+                    'json' => ['query' => $qPlayers, 'variables' => ['reportId' => $reportId]]
                 ]);
-                $masterData = json_decode($resActors->getBody(), true)['data']['reportData']['report'];
                 
+                $dataJson = json_decode($resPlayers->getBody(), true);
+                $report = $dataJson['data']['reportData']['report'];
+                
+                // Mapear quién participó de verdad
+                $activeIds = [];
+                // Sacar de la tabla de daño
+                foreach ($report['dps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
+                // Sacar de la tabla de sanación (para no olvidar healers)
+                foreach ($report['hps']['data']['entries'] ?? [] as $entry) $activeIds[] = $entry['id'];
+                
+                $activeIds = array_unique($activeIds);
+
                 $playerResults = [];
-                foreach ($masterData['masterData']['actors'] as $actor) {
-                    $playerResults[$actor['id']] = ['name' => $actor['name'], 'buffs' => []];
+                foreach ($report['masterData']['actors'] as $actor) {
+                    if (in_array($actor['id'], $activeIds)) {
+                        $playerResults[$actor['id']] = ['name' => $actor['name'], 'buffs' => []];
+                    }
                 }
 
-                // 4. Escaneo por AbilityID (Igual que en el test)
+                // 3. Escaneo de Auras (Lógica AbilityID que funciona)
                 foreach (self::$tbcSpellIds as $spellId => $spellName) {
                     $qAura = 'query($reportId: String!, $abilityId: Float!) {
                         reportData { report(code: $reportId) {
@@ -66,56 +88,58 @@ class LogConsumablesCommand
 
                     $resAura = $httpClient->post("https://www.warcraftlogs.com/api/v2/client", [
                         'headers' => ['Authorization' => "Bearer $token"],
-                        'json' => [
-                            'query' => $qAura, 
-                            'variables' => ['reportId' => $reportId, 'abilityId' => (float)$spellId]
-                        ]
+                        'json' => ['query' => $qAura, 'variables' => ['reportId' => $reportId, 'abilityId' => (float)$spellId]]
                     ]);
 
                     $auraData = json_decode($resAura->getBody(), true);
-                    $aurasEncontradas = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
+                    $auras = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
 
-                    foreach ($aurasEncontradas as $aura) {
-                        // LA CORRECCIÓN CLAVE: Usar el ID del objeto aura como ID del jugador
-                        $pId = $aura['id']; 
+                    foreach ($auras as $aura) {
+                        $pId = $aura['id']; // ID del jugador en esta vista
                         if (isset($playerResults[$pId])) {
                             $playerResults[$pId]['buffs'][] = $spellName;
                         }
                     }
                 }
 
-                // 5. Formatear resultados
+                // 4. Estadísticas y Formateo
                 $with = ""; $without = "";
+                $cWith = 0; $cWithout = 0;
+
                 foreach ($playerResults as $p) {
                     if (!empty($p['buffs'])) {
-                        $b = implode(", ", array_unique($p['buffs']));
-                        $with .= "• **{$p['name']}**: `{$b}`\n";
+                        $cWith++;
+                        $buffs = implode(", ", array_unique($p['buffs']));
+                        $with .= "• **{$p['name']}**: `{$buffs}`\n";
                     } else {
-                        if ($p['name'] !== "Multiple Players") {
-                            $without .= "• **{$p['name']}**\n";
-                        }
+                        $cWithout++;
+                        $without .= "• **{$p['name']}**\n";
                     }
                 }
 
-                // Si el mensaje es muy largo, Discord lo rechazará (límite 4096 caracteres)
-                $with = strlen($with) > 1000 ? substr($with, 0, 1000) . "..." : $with;
-                $without = strlen($without) > 1000 ? substr($without, 0, 1000) . "..." : $without;
+                $total = $cWith + $cWithout;
 
                 $embed = [
-                    'title' => "Consumibles: " . $masterData['title'],
+                    'title' => "Reporte: " . $report['title'],
+                    'description' => "📊 **Resumen de Raid:**\n" .
+                                     "Total Participantes: **{$total}**\n" .
+                                     "✅ Con consumibles: **{$cWith}**\n" .
+                                     "❌ Sin consumibles: **{$cWithout}**",
                     'url' => $logUrl,
-                    'color' => 0x2ecc71,
+                    'color' => ($cWithout > 0) ? 0xe74c3c : 0x2ecc71,
                     'fields' => [
-                        ['name' => "✅ Con Flask / Elixires", 'value' => $with ?: "Nadie.", 'inline' => false],
-                        ['name' => "❌ Sin Consumibles", 'value' => $without ?: "¡Todos full!", 'inline' => false]
-                    ]
+                        ['name' => "✅ PREPARADOS ($cWith)", 'value' => $with ?: "Nadie.", 'inline' => false],
+                        ['name' => "❌ SIN NADA ($cWithout)", 'value' => $without ?: "¡Todos listos!", 'inline' => false]
+                    ],
+                    'footer' => ['text' => "Solo incluye jugadores con actividad (DPS/Heal)"]
                 ];
 
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
 
             } catch (\Exception $e) {
-                // Si algo falla, al menos enviamos el error a Discord para saber qué pasó
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
+                //save error log
+                file_put_contents(__DIR__ . '/../../logs/consumables_errors.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
             }
         });
     }
