@@ -151,6 +151,7 @@ class GearScoreCommand
                "🏃 **Agi:** {$stats['agility']['effective']}\n" .
                "🛡️ **Sta:** {$stats['stamina']['effective']}\n" .
                "🧠 **Int:** {$stats['intellect']['effective']}\n" .
+               "✨ **Spi:** {$stats['spirit']['effective']}\n" .
                "──────────\n" .
                "🪓 **AP:** {$stats['attack_power']}\n" .
                "🧙 **SP:** {$stats['spell_power']}\n" .
