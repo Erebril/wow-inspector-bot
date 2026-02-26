@@ -52,6 +52,8 @@ class GearScoreCommand
         $statsData = self::fetchBlizzard($httpClient, "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/statistics", $headers, $namespace);
         $mediaData = self::fetchBlizzard($httpClient, "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/character-media", $headers, $namespace);
         $profileData = self::fetchBlizzard($httpClient, "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}", $headers, $namespace);
+        // Obtener Parses de WarcraftLogs (Opcional, requiere lógica adicional para mapear personaje a logs)
+        $logsData = self::fetchWarcraftLogs($httpClient, $charName, $realmSlug);
 
         // 3. Procesar GearScore e Inventario
         $cache = new ItemCacheManager();
@@ -118,6 +120,12 @@ class GearScoreCommand
         return json_decode($response->getBody(), true);
     }
 
+    private static function fetchWarcraftLogs(Client $client, $charName, $realmSlug) {
+        // Lógica para obtener datos de WarcraftLogs (requiere token y consultas GraphQL)
+        // Este es un placeholder y debería implementarse según las necesidades específicas
+        return null;
+    }
+
     private static function formatItemRow($item) {
         $lvlReq = $item['requirements']['level']['value'] ?? 'N/A';
         $quality = $item['quality']['name'] ?? 'Common';
@@ -144,8 +152,12 @@ class GearScoreCommand
                "🛡️ **Sta:** {$stats['stamina']['effective']}\n" .
                "🧠 **Int:** {$stats['intellect']['effective']}\n" .
                "──────────\n" .
-               "⚔️ **Crit:** " . number_format($stats['melee_crit']['value'] ?? 0, 2) . "%\n" .
-               "🔥 **Spell:** " . number_format($stats['spell_crit']['value'] ?? 0, 2) . "%";
+               "🪓 **AP:** {$stats['attack_power']['effective']}\n" .
+               "🧙 **SP:** {$stats['spell_power']['effective']}\n" .
+               "🛡️ **Armor:** {$stats['armor']['effective']}\n" .
+               "⚔️ **Melee Crit:** " . number_format($stats['melee_crit']['value'] ?? 0, 2) . "%\n" .
+               "🏹 **Ranged Crit:** " . number_format($stats['ranged_crit']['value'] ?? 0, 2) . "%\n" .
+               "🔥 **Spell Crit:** " . number_format($stats['spell_crit']['value'] ?? 0, 2) . "%";
     }
 
     private static function createEmbedBuilder($name, $realm, $profile, $gs, $tier, $items, $stats, $thumb, $region) {
@@ -162,6 +174,8 @@ class GearScoreCommand
                 'thumbnail' => ['url' => $thumb],
                 'fields' => [
                     ['name' => "🏅 Gear Score", 'value' => "**$gs** - $tier", 'inline' => false],
+                    // Logs
+                    // ['name' => "📈 WarcraftLogs", 'value' => "[Ver Perfil en WCL]({$logsUrl})", 'inline' => false],
                     ['name' => "📦 Equipamiento (iLvl {$profile['equipped_item_level']})", 'value' => $items ?: "Sin equipo", 'inline' => true],
                     ['name' => '📊 Estadísticas', 'value' => $stats, 'inline' => true]
                 ],

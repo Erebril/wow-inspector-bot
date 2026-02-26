@@ -49,6 +49,7 @@ try {
         'query' => ['namespace' => $namespace, 'locale' => $locale]
     ]);
     $equipData = json_decode($equipResponse->getBody(), true);
+    echo "✅ Equipamiento obtenido.\n";
 
     // ... (Después de obtener $accessToken y $headers) ...
 
@@ -99,6 +100,7 @@ try {
         'query' => ['namespace' => $namespace, 'locale' => $locale]
     ]);
     $statsData = json_decode($statsResponse->getBody(), true);
+    echo "✅ Estadísticas obtenidas.\n";
 
     // C: Perfil General
     $profileUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}";
@@ -107,6 +109,7 @@ try {
         'query' => ['namespace' => $namespace, 'locale' => $locale]
     ]);
     $profileData = json_decode($profileResponse->getBody(), true);
+    echo "✅ Perfil general obtenido.\n";
     // D: Pvp (Opcional, no se muestra en este ejemplo pero se puede agregar de forma similar)
     $pvpUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/pvp-summary";
     $pvpResponse = $httpClient->get($pvpUrl, [
@@ -114,6 +117,7 @@ try {
         'query' => ['namespace' => $namespace, 'locale' => $locale]
     ]);
     $pvpData = json_decode($pvpResponse->getBody(), true);
+    echo "✅ Resumen PvP obtenido.\n";
 
     echo "\n✅ ¡ÉXITO! Personaje encontrado.\n";
     echo "\n=================================\n";
