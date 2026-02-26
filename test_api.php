@@ -107,15 +107,32 @@ try {
         'query' => ['namespace' => $namespace, 'locale' => $locale]
     ]);
     $profileData = json_decode($profileResponse->getBody(), true);
+    // D: Pvp (Opcional, no se muestra en este ejemplo pero se puede agregar de forma similar)
+    $pvpUrl = "https://{$region}.api.blizzard.com/profile/wow/character/{$realmSlug}/{$charName}/pvp-summary";
+    $pvpResponse = $httpClient->get($pvpUrl, [
+        'headers' => $headers,
+        'query' => ['namespace' => $namespace, 'locale' => $locale]
+    ]);
+    $pvpData = json_decode($pvpResponse->getBody(), true);
 
     echo "\n✅ ¡ÉXITO! Personaje encontrado.\n";
     echo "\n=================================\n";
     echo "Nombre: " . ($profileData['name'] ?? 'N/A') . "\n";
+    echo "Guild:  " . ($profileData['guild']['name'] ?? 'Sin Guild') . "\n";
     echo "Nivel:  " . ($profileData['level'] ?? 'N/A') . "\n";
     echo "Clase:  " . ($profileData['character_class']['name'] ?? 'N/A') . "\n";
     echo "Raza:  " . ($profileData['race']['name'] ?? 'N/A') . "\n";
-    // guild
-    echo "Guild:  " . ($profileData['guild']['name'] ?? 'Sin Guild') . "\n";
+    // Melee Crit y Ranged Crit y Spell Crit
+    echo "Attack Power: " . ($statsData['attack_power'] ?? 'N/A') . "\n";
+    echo "Spell Power: " . ($statsData['spell_power'] ?? 'N/A') . "\n";
+    echo "Melee Crit: " . ($statsData['melee_crit']['value'] ?? 'N/A') . "%\n";
+    echo "Ranged Crit: " . ($statsData['ranged_crit']['value'] ?? 'N/A') . "%\n";
+    echo "Spell Crit: " . ($statsData['spell_crit']['value'] ?? 'N/A') . "%\n";
+    //Armor and Defense
+    echo "Armor: " . ($statsData['armor']['effective'] ?? 'N/A') . "\n";
+    echo "Defense: " . ($statsData['defense']['effective'] ?? 'N/A') . "\n";
+
+
     // ilvl de los items equipados
     echo "Item Level: " . ($profileData['equipped_item_level'] ?? 'N/A') . "\n";
 
@@ -131,6 +148,7 @@ try {
             'profile' => $profileData,
             'equipment' => $equipData,
             'statistics' => $statsData,
+            'pvp_summary' => $pvpData
         ];
 
         $fileName = "{$charName}_{$realmSlug}_full_profile.json";
