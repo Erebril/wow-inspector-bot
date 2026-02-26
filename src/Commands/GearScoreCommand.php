@@ -152,8 +152,8 @@ class GearScoreCommand
                "🛡️ **Sta:** {$stats['stamina']['effective']}\n" .
                "🧠 **Int:** {$stats['intellect']['effective']}\n" .
                "──────────\n" .
-               "🪓 **AP:** {$stats['attack_power']['effective']}\n" .
-               "🧙 **SP:** {$stats['spell_power']['effective']}\n" .
+               "🪓 **AP:** {$stats['attack_power']}\n" .
+               "🧙 **SP:** {$stats['spell_power']}\n" .
                "🛡️ **Armor:** {$stats['armor']['effective']}\n" .
                "⚔️ **Melee Crit:** " . number_format($stats['melee_crit']['value'] ?? 0, 2) . "%\n" .
                "🏹 **Ranged Crit:** " . number_format($stats['ranged_crit']['value'] ?? 0, 2) . "%\n" .
