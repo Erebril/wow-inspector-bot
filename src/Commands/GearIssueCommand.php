@@ -189,15 +189,16 @@ class GearIssueCommand
 
             $itemName = $item['name'] ?? ('Item ' . ($item['id'] ?? '?'));
             $slot = isset($item['slot']) ? (string)$item['slot'] : '';
+            $slotName = self::getSlotName($slot);
 
             if (self::isEnchantableSlot($slot)) {
                 $permanentEnchant = $item['permanentEnchant'] ?? $item['enchant'] ?? null;
                 if ($permanentEnchant === null || (string)$permanentEnchant === '' || (string)$permanentEnchant === '0') {
                     $missingEnchants++;
-                    $issues[] = "Sin enchant en {$itemName}";
+                    $issues[] = "Sin enchant en {$slotName}: {$itemName}";
                 } elseif (self::isBadEnchantForClass((string)$permanentEnchant, $playerClass, false)) {
                     $badEnchants++;
-                    $issues[] = "Enchant incorrecto para {$playerClass} en {$itemName} (ID {$permanentEnchant})";
+                    $issues[] = "Enchant incorrecto para {$playerClass} en {$slotName}: {$itemName} (ID {$permanentEnchant})";
                 }
             }
 
@@ -205,7 +206,7 @@ class GearIssueCommand
             if ($temporaryEnchant !== null && (string)$temporaryEnchant !== '' && (string)$temporaryEnchant !== '0') {
                 if (self::isBadEnchantForClass((string)$temporaryEnchant, $playerClass, true)) {
                     $badEnchants++;
-                    $issues[] = "Enchant temporal incorrecto para {$playerClass} en {$itemName} (ID {$temporaryEnchant})";
+                    $issues[] = "Enchant temporal incorrecto para {$playerClass} en {$slotName}: {$itemName} (ID {$temporaryEnchant})";
                 }
             }
 
@@ -216,7 +217,7 @@ class GearIssueCommand
             if ($expectedSockets > 0 && $actualGems < $expectedSockets) {
                 $missing = $expectedSockets - $actualGems;
                 $missingGems += $missing;
-                $issues[] = "{$itemName} con {$missing} gema(s) faltante(s)";
+                $issues[] = "{$slotName}: {$itemName} con {$missing} gema(s) faltante(s)";
             }
 
             foreach ($gems as $gem) {
@@ -225,14 +226,14 @@ class GearIssueCommand
 
                 if ($gemId !== '' && in_array($gemId, self::UNCUT_GEM_IDS, true)) {
                     $uncutGems++;
-                    $issues[] = "Gema sin cortar en {$itemName} (ID {$gemId})";
+                    $issues[] = "Gema sin cortar en {$slotName}: {$itemName} (ID {$gemId})";
                     continue;
                 }
 
                 // En GearIssues.gs las gemas por debajo de calidad rara se marcan como problema.
                 if ($gemItemLevel > 0 && $gemItemLevel < 60) {
                     $badGems++;
-                    $issues[] = "Gema de baja calidad en {$itemName} (iLvl {$gemItemLevel})";
+                    $issues[] = "Gema de baja calidad en {$slotName}: {$itemName} (iLvl {$gemItemLevel})";
                 }
             }
         }
@@ -303,6 +304,32 @@ class GearIssueCommand
         }
 
         return 0;
+    }
+
+    private static function getSlotName(string $slot): string
+    {
+        $slotMap = [
+            '0' => 'Head',
+            '1' => 'Neck',
+            '2' => 'Shoulder',
+            '3' => 'Shirt',
+            '4' => 'Chest',
+            '5' => 'Waist',
+            '6' => 'Legs',
+            '7' => 'Feet',
+            '8' => 'Wrist',
+            '9' => 'Hands',
+            '10' => 'Finger 1',
+            '11' => 'Finger 2',
+            '12' => 'Trinket 1',
+            '13' => 'Trinket 2',
+            '14' => 'Back',
+            '15' => 'Main Hand',
+            '16' => 'Off Hand',
+            '17' => 'Ranged',
+        ];
+
+        return $slotMap[$slot] ?? ('Slot ' . $slot);
     }
 
     private static function truncateFieldValue(string $value, int $max = 1000): string
