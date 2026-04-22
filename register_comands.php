@@ -51,6 +51,18 @@ $commands = [
                 "required" => true
             ]
         ]
+    ],
+    [
+        "name" => "gearissue",
+        "description" => "Analiza problemas de equipo (encantamientos/gemas) en un log de WarcraftLogs",
+        "options" => [
+            [
+                "name" => "url",
+                "description" => "Enlace completo al reporte de WarcraftLogs",
+                "type" => 3, // STRING
+                "required" => true
+            ]
+        ]
     ]
 ];
 
