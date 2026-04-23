@@ -47,7 +47,12 @@ class EnchantsIssueCommand
                 $playersWithIssuesCount = $result['playersWithIssuesCount'];
                 $playersOk = max(0, $totalPlayers - $playersWithIssuesCount);
 
-                $playerLines = "";
+                $issuesByRole = [
+                    'DPS' => [],
+                    'HEALERS' => [],
+                    'TANKS' => [],
+                ];
+
                 foreach (array_slice($playersWithIssues, 0, 25) as $entry) {
                     $parts = [];
                     if (!empty($entry['missingSlots'])) {
@@ -57,11 +62,11 @@ class EnchantsIssueCommand
                         $parts[] = "⚠️ " . implode(', ', $entry['badEnchantIssues']);
                     }
                     $line = implode(' | ', $parts);
-                    $playerLines .= "• **{$entry['name']}** ({$entry['role']}): {$line}\n";
-                }
-
-                if ($playerLines === '') {
-                    $playerLines = "✅ Sin problemas detectados.";
+                    $roleKey = strtoupper((string)($entry['role'] ?? 'DPS'));
+                    if (!isset($issuesByRole[$roleKey])) {
+                        $issuesByRole[$roleKey] = [];
+                    }
+                    $issuesByRole[$roleKey][] = "• **{$entry['name']}**: {$line}";
                 }
 
                 $fightNote = isset($report['_fightUsed'])
@@ -76,17 +81,37 @@ class EnchantsIssueCommand
                         $fightNote,
                     'url' => $logUrl,
                     'color' => ($playersWithIssuesCount > 0) ? 0xe67e22 : 0x2ecc71,
-                    'fields' => [
-                        [
-                            'name' => "⚠️ Jugadores con issues  (❌=sin enchant | ⚠️=enchant malo)",
-                            'value' => self::truncateFieldValue($playerLines),
-                            'inline' => false
-                        ]
-                    ],
+                    'fields' => [],
                     'footer' => ['text' => "WarcraftLogs API v2 | Análisis exclusivo de enchants"]
                 ];
 
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
+
+                if ($playersWithIssuesCount === 0) {
+                    $interaction->sendFollowUpMessage(
+                        MessageBuilder::new()->setContent("✅ No se detectaron issues de enchants en esta pelea."),
+                        true
+                    );
+                } else {
+                    foreach (['DPS', 'HEALERS', 'TANKS'] as $role) {
+                        $lines = $issuesByRole[$role] ?? [];
+                        if (empty($lines)) {
+                            continue;
+                        }
+
+                        foreach (self::chunkLinesForDiscord($lines, 1600) as $idx => $chunk) {
+                            $title = "⚠️ {$role} con issues";
+                            if ($idx > 0) {
+                                $title .= " (parte " . ($idx + 1) . ")";
+                            }
+
+                            $interaction->sendFollowUpMessage(
+                                MessageBuilder::new()->setContent($title . "\n" . $chunk),
+                                true
+                            );
+                        }
+                    }
+                }
 
             } catch (\Exception $e) {
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
@@ -376,5 +401,32 @@ class EnchantsIssueCommand
         }
 
         return substr($value, 0, $max - 3) . '...';
+    }
+
+    private static function chunkLinesForDiscord(array $lines, int $maxChars = 1600): array
+    {
+        $chunks = [];
+        $current = '';
+
+        foreach ($lines as $line) {
+            $candidate = $current === '' ? $line : ($current . "\n" . $line);
+            if (strlen($candidate) > $maxChars) {
+                if ($current !== '') {
+                    $chunks[] = $current;
+                    $current = $line;
+                } else {
+                    $chunks[] = substr($line, 0, $maxChars - 3) . '...';
+                    $current = '';
+                }
+            } else {
+                $current = $candidate;
+            }
+        }
+
+        if ($current !== '') {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
     }
 }
