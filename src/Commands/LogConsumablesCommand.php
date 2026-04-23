@@ -8,25 +8,18 @@ use GuzzleHttp\Client;
 
 class LogConsumablesCommand
 {
-    private static $tbcSpellIds = [
-        28520 => "🧪 Relentless Assault",
-        28540 => "🧪 Pure Death",
-        28521 => "🧪 Blinding Light",
-        28519 => "🧪 Mighty Restoration",
-        28518 => "🧪 Fortification",
-        28491 => "🧴 Healing Power",
-        28497 => "🧴 G. Agility",
-        28503 => "🧴 Major Shadow",
-        28501 => "🧴 Major Fire",
-        28502 => "🧴 M. Defense",
-        28509 => "🧴 G. Versatility",
-        39627 => "🧴 Draenic Wisdom",
-        33721 => "🧴 Adept",
-        39625 => "🧴 M. Fortitude",
-        11406 => "🧴 Demonslaying",
-        11371 => "⚠️ Gift of Arthas",
-        17538 => "⚠️ Mongoose",
-    ];
+    private static ?array $tbcSpellIds = null;
+
+    private static function getSpellIds(): array
+    {
+        if (self::$tbcSpellIds === null) {
+            $path = __DIR__ . '/../../consumables.json';
+            self::$tbcSpellIds = file_exists($path)
+                ? (json_decode(file_get_contents($path), true) ?? [])
+                : [];
+        }
+        return self::$tbcSpellIds;
+    }
 
     public static function run(Interaction $interaction)
     {
@@ -86,7 +79,7 @@ class LogConsumablesCommand
                 }
 
                 // 3. Escaneo de Auras (Lógica AbilityID que funciona)
-                foreach (self::$tbcSpellIds as $spellId => $spellName) {
+                foreach (self::getSpellIds() as $spellId => $spellName) {
                     $qAura = 'query($reportId: String!, $abilityId: Float!) {
                         reportData { report(code: $reportId) {
                             table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $abilityId)

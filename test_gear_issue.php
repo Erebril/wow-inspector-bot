@@ -29,33 +29,26 @@ try {
         echo "Pelea analizada: {$report['_fightUsed']}\n";
     }
     echo "========================================\n";
-    echo "Total jugadores: {$totalPlayers}\n";
-    echo "Sin issues: {$playersOk}\n";
-    echo "Con issues: {$playersWithIssuesCount}\n\n";
-
-    echo "Comparaciones\n";
-    echo "- Sin enchant: {$totals['missingEnchants']}\n";
-    echo "- Enchant malo (slot/clase): {$totals['badEnchants']}\n";
+    echo "Total: {$totalPlayers} | OK: {$playersOk} | Issues: {$playersWithIssuesCount} | Sin enchant: {$totals['missingEnchants']} | Enchant malo: {$totals['badEnchants']}\n\n";
     echo "\n";
 
     echo "Top jugadores con issues\n";
     if (empty($playersWithIssues)) {
-        echo "- Sin problemas detectados en el resumen de equipo.\n";
+        echo "- Sin problemas detectados.\n";
     } else {
-        foreach (array_slice($playersWithIssues, 0, 15) as $entry) {
-            echo '- ' . $entry['name'] . ' (' . $entry['role'] . '): ' .
-                'E' . $entry['missingEnchants'] .
-                ' | EB' . $entry['badEnchants'] . "\n";
-
-            if (!empty($entry['issues'])) {
-                foreach ($entry['issues'] as $issue) {
-                    echo '  - ' . $issue . "\n";
-                }
+        foreach (array_slice($playersWithIssues, 0, 25) as $entry) {
+            $parts = [];
+            if (!empty($entry['missingSlots'])) {
+                $parts[] = '❌ ' . implode(', ', $entry['missingSlots']);
             }
+            if (!empty($entry['badEnchantIssues'])) {
+                $parts[] = '⚠️ ' . implode(', ', $entry['badEnchantIssues']);
+            }
+            echo '- ' . $entry['name'] . ' (' . $entry['role'] . '): ' . implode(' | ', $parts) . "\n";
         }
     }
 
-    echo "\nLeyenda: E=Sin enchant | EB=Enchant malo\n";
+    echo "\nLeyenda: ❌=Sin enchant | ⚠️=Enchant malo\n";
     echo "========================================\n";
 } catch (Throwable $e) {
     echo 'ERROR: ' . $e->getMessage() . PHP_EOL;

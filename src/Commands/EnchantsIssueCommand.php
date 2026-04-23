@@ -47,27 +47,22 @@ class EnchantsIssueCommand
                 $playersWithIssuesCount = $result['playersWithIssuesCount'];
                 $playersOk = max(0, $totalPlayers - $playersWithIssuesCount);
 
-                $summaryByPlayer = "";
-                $detailLines = "";
-                foreach (array_slice($playersWithIssues, 0, 15) as $entry) {
-                    $summaryByPlayer .= "• **{$entry['name']}** ({$entry['role']}): " .
-                        "E{$entry['missingEnchants']} | EB{$entry['badEnchants']}\n";
-
-                    if (!empty($entry['issues'])) {
-                        $allIssues = implode(' | ', $entry['issues']);
-                        $detailLines .= "• **{$entry['name']}**: {$allIssues}\n";
+                $playerLines = "";
+                foreach (array_slice($playersWithIssues, 0, 25) as $entry) {
+                    $parts = [];
+                    if (!empty($entry['missingSlots'])) {
+                        $parts[] = "❌ " . implode(', ', $entry['missingSlots']);
                     }
+                    if (!empty($entry['badEnchantIssues'])) {
+                        $parts[] = "⚠️ " . implode(', ', $entry['badEnchantIssues']);
+                    }
+                    $line = implode(' | ', $parts);
+                    $playerLines .= "• **{$entry['name']}** ({$entry['role']}): {$line}\n";
                 }
 
-                if ($summaryByPlayer === '') {
-                    $summaryByPlayer = "Sin problemas detectados en el resumen de equipo.";
+                if ($playerLines === '') {
+                    $playerLines = "✅ Sin problemas detectados.";
                 }
-
-                if ($detailLines === '') {
-                    $detailLines = "No hay detalle adicional.";
-                }
-
-                $legend = "E=Sin enchant | EB=Enchant malo (slot/clase)";
 
                 $fightNote = isset($report['_fightUsed'])
                     ? "\n⚔️ Pelea analizada: **{$report['_fightUsed']}**"
@@ -76,34 +71,19 @@ class EnchantsIssueCommand
                 $embed = [
                     'title' => "Análisis de Equipo: " . $report['title'],
                     'description' =>
-                        "📊 **Resumen de Enchants:**\n" .
-                        "Total jugadores: **{$totalPlayers}**\n" .
-                        "✅ Sin problemas: **{$playersOk}**\n" .
-                        "⚠️ Con problemas: **{$playersWithIssuesCount}**" .
+                        "Total: **{$totalPlayers}** | ✅ OK: **{$playersOk}** | ⚠️ Issues: **{$playersWithIssuesCount}** | " .
+                        "❌ Sin enchant: **{$totals['missingEnchants']}** | ⚠️ Enchant malo: **{$totals['badEnchants']}**" .
                         $fightNote,
                     'url' => $logUrl,
                     'color' => ($playersWithIssuesCount > 0) ? 0xe67e22 : 0x2ecc71,
                     'fields' => [
                         [
-                            'name' => "🧩 Comparaciones",
-                            'value' =>
-                                "• Sin enchant en slots relevantes: **{$totals['missingEnchants']}**\n" .
-                                "• Encantamientos malos (slot/clase): **{$totals['badEnchants']}**\n\n" .
-                                $legend,
-                            'inline' => false
-                        ],
-                        [
-                            'name' => "👥 Top jugadores con problemas",
-                            'value' => self::truncateFieldValue($summaryByPlayer),
-                            'inline' => false
-                        ],
-                        [
-                            'name' => "🔎 Todos los problemas por jugador",
-                            'value' => self::truncateFieldValue($detailLines),
+                            'name' => "⚠️ Jugadores con issues  (❌=sin enchant | ⚠️=enchant malo)",
+                            'value' => self::truncateFieldValue($playerLines),
                             'inline' => false
                         ]
                     ],
-                    'footer' => ['text' => "WarcraftLogs API v2 | Analisis exclusivo de enchants"]
+                    'footer' => ['text' => "WarcraftLogs API v2 | Análisis exclusivo de enchants"]
                 ];
 
                 $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
@@ -268,7 +248,8 @@ class EnchantsIssueCommand
 
         $missingEnchants = 0;
         $badEnchants = 0;
-        $issues = [];
+        $missingSlots = [];
+        $badEnchantIssues = [];
         $playerClass = self::getPlayerClass($player);
 
         foreach ($gear as $item) {
@@ -276,7 +257,6 @@ class EnchantsIssueCommand
                 continue;
             }
 
-            $itemName = $item['name'] ?? ('Item ' . ($item['id'] ?? '?'));
             $slot = isset($item['slot']) ? (string)$item['slot'] : '';
             $slotName = self::getSlotName($slot);
 
@@ -290,14 +270,14 @@ class EnchantsIssueCommand
                 $permanentEnchant = $item['permanentEnchant'] ?? $item['enchant'] ?? null;
                 if ($permanentEnchant === null || (string)$permanentEnchant === '' || (string)$permanentEnchant === '0') {
                     $missingEnchants++;
-                    $issues[] = "Sin enchant en {$slotName}: {$itemName}";
+                    $missingSlots[] = $slotName;
                 } else {
                     $enchantIdStr = (string)$permanentEnchant;
                     $cheapList = self::getCheapEnchants();
                     if (isset($cheapList[$enchantIdStr])) {
-                        $enchantNames = implode(' / ', $cheapList[$enchantIdStr]);
+                        $enchantNames = implode('/', $cheapList[$enchantIdStr]);
                         $badEnchants++;
-                        $issues[] = "Enchant barato en {$slotName}: {$enchantNames} (ID {$enchantIdStr})";
+                        $badEnchantIssues[] = "{$slotName}: {$enchantNames}";
                     }
                 }
             }
@@ -306,12 +286,10 @@ class EnchantsIssueCommand
             if ($temporaryEnchant !== null && (string)$temporaryEnchant !== '' && (string)$temporaryEnchant !== '0') {
                 if (self::isBadEnchantForClass((string)$temporaryEnchant, $playerClass, true)) {
                     $badEnchants++;
-                    $issues[] = "Enchant temporal incorrecto para {$playerClass} en {$slotName}: {$itemName} (ID {$temporaryEnchant})";
+                    $badEnchantIssues[] = "{$slotName}: temp";
                 }
             }
         }
-
-        $issues = array_values(array_unique($issues));
 
         return [
             'name' => $name,
@@ -319,7 +297,8 @@ class EnchantsIssueCommand
             'missingEnchants' => $missingEnchants,
             'badEnchants' => $badEnchants,
             'totalIssues' => $missingEnchants + $badEnchants,
-            'issues' => $issues,
+            'missingSlots' => $missingSlots,
+            'badEnchantIssues' => $badEnchantIssues,
         ];
     }
 
