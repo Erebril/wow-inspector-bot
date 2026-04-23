@@ -63,6 +63,18 @@ $commands = [
                 "required" => true
             ]
         ]
+    ],
+    [
+        "name" => "gems",
+        "description" => "Analiza problemas de gemas en un log de WarcraftLogs",
+        "options" => [
+            [
+                "name" => "url",
+                "description" => "Enlace completo al reporte de WarcraftLogs",
+                "type" => 3,
+                "required" => true
+            ]
+        ]
     ]
 ];
 
