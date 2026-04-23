@@ -85,13 +85,9 @@ class EnchantsIssueCommand
                     'footer' => ['text' => "WarcraftLogs API v2 | Análisis exclusivo de enchants"]
                 ];
 
-                $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
-
+                $followUpMessages = [];
                 if ($playersWithIssuesCount === 0) {
-                    $interaction->sendFollowUpMessage(
-                        MessageBuilder::new()->setContent("✅ No se detectaron issues de enchants en esta pelea."),
-                        true
-                    );
+                    $followUpMessages[] = "✅ No se detectaron issues de enchants en esta pelea.";
                 } else {
                     foreach (['DPS', 'HEALERS', 'TANKS'] as $role) {
                         $lines = $issuesByRole[$role] ?? [];
@@ -104,14 +100,19 @@ class EnchantsIssueCommand
                             if ($idx > 0) {
                                 $title .= " (parte " . ($idx + 1) . ")";
                             }
-
-                            $interaction->sendFollowUpMessage(
-                                MessageBuilder::new()->setContent($title . "\n" . $chunk),
-                                true
-                            );
+                            $followUpMessages[] = $title . "\n" . $chunk;
                         }
                     }
                 }
+
+                $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed))->then(function () use ($interaction, $followUpMessages) {
+                    foreach ($followUpMessages as $content) {
+                        $interaction->sendFollowUpMessage(
+                            MessageBuilder::new()->setContent($content),
+                            true
+                        );
+                    }
+                });
 
             } catch (\Exception $e) {
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
@@ -300,6 +301,9 @@ class EnchantsIssueCommand
                     $enchantIdStr = (string)$permanentEnchant;
                     $cheapList = self::getCheapEnchants();
                     if (isset($cheapList[$enchantIdStr])) {
+                        if (self::isAllowedCheapEnchantForPlayer($enchantIdStr, $playerClass, $role, $slot)) {
+                            continue;
+                        }
                         $enchantNames = implode('/', $cheapList[$enchantIdStr]);
                         $badEnchants++;
                         $badEnchantIssues[] = "{$slotName}: {$enchantNames}";
@@ -351,6 +355,19 @@ class EnchantsIssueCommand
         }
 
         if (in_array($playerClass, $casterClasses, true) && in_array($enchantId, $meleeHitEnchantIds, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function isAllowedCheapEnchantForPlayer(string $enchantId, string $playerClass, string $role, string $slot): bool
+    {
+        $class = strtolower($playerClass);
+        $roleNormalized = strtolower($role);
+
+        // Excepción: Paladín tanque con 40 SP en main hand (ID 2669) es válido.
+        if ($class === 'paladin' && $roleNormalized === 'tanks' && $slot === '15' && $enchantId === '2669') {
             return true;
         }
 
