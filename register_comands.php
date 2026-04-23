@@ -53,8 +53,8 @@ $commands = [
         ]
     ],
     [
-        "name" => "gearissue",
-        "description" => "Analiza problemas de equipo (encantamientos/gemas) en un log de WarcraftLogs",
+        "name" => "enchants",
+        "description" => "Analiza problemas de encantamientos en un log de WarcraftLogs",
         "options" => [
             [
                 "name" => "url",

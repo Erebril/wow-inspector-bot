@@ -1,0 +1,358 @@
+{
+    "15": [
+        "8 Armor"
+    ],
+    "16": [
+        "16 Armor"
+    ],
+    "17": [
+        "24 Armor"
+    ],
+    "18": [
+        "32 Armor"
+    ],
+    "24": [
+        "Chest - 5 Mana"
+    ],
+    "41": [
+        "Bracers - 5 HP",
+        "Chest - 5 HP"
+    ],
+    "43": [
+        "Shield - Iron Spike"
+    ],
+    "44": [
+        "Chest - 10 Absorb"
+    ],
+    "63": [
+        "Chest - 25 Absorb"
+    ],
+    "65": [
+        "Cloak - 1 Res"
+    ],
+    "66": [
+        "Bracers - 1 Sta",
+        "Boots - 1 Sta",
+        "Shield - 1 Sta"
+    ],
+    "241": [
+        "Weapon - 2 Dmg"
+    ],
+    "242": [
+        "Chest - 15 HP"
+    ],
+    "246": [
+        "Chest - 20 Mana"
+    ],
+    "247": [
+        "Boots - 1 Agi",
+        "Cloak - 1 Agi"
+    ],
+    "248": [
+        "Bracers - 1 Str"
+    ],
+    "254": [
+        "Chest - 25 HP"
+    ],
+    "255": [
+        "Bracers - 3 Spi",
+        "Boots - 3 Spi",
+        "Shield - 3 Spi",
+        "Weapon - 3 Spi"
+    ],
+    "256": [
+        "Cloak - 5 FR"
+    ],
+    "463": [
+        "Shield - Mith Spike"
+    ],
+    "464": [
+        "Boots - Mount Speed"
+    ],
+    "723": [
+        "Bracers - 3 Int",
+        "Weapon - 3 Int"
+    ],
+    "724": [
+        "Bracers - 3 Sta",
+        "Boots - 3 Sta",
+        "Shield - 3 Sta"
+    ],
+    "744": [
+        "Cloak - 20 Armor"
+    ],
+    "783": [
+        "Cloak - 10 Armor"
+    ],
+    "803": [
+        "Weapon - Fiery"
+    ],
+    "805": [
+        "Weapon - 4 Dmg"
+    ],
+    "823": [
+        "Bracers - 3 Str"
+    ],
+    "843": [
+        "Chest - 30 Mana"
+    ],
+    "844": [
+        "Gloves - 3 Mining"
+    ],
+    "845": [
+        "Gloves - 3 Herb"
+    ],
+    "846": [
+        "Gloves - 2 Fishing"
+    ],
+    "847": [
+        "Chest - 1 Stats"
+    ],
+    "848": [
+        "Cloak - 30 Armor",
+        "Shield - 30 Armor"
+    ],
+    "849": [
+        "Boots - 3 Agi"
+    ],
+    "850": [
+        "Chest - 35 HP"
+    ],
+    "851": [
+        "Bracers - 5 Spi",
+        "Shield - 5 Spi"
+    ],
+    "852": [
+        "Bracers - 5 Sta",
+        "Boots - 5 Sta",
+        "Shield - 5 Sta"
+    ],
+    "854": [
+        "Weapon - Elemental"
+    ],
+    "856": [
+        "Bracers - 5 Str",
+        "Gloves - 5 Str"
+    ],
+    "857": [
+        "Chest - 50 Mana"
+    ],
+    "865": [
+        "Gloves - 5 Skinn"
+    ],
+    "866": [
+        "Chest - 2 Stats"
+    ],
+    "884": [
+        "Cloak - 50 Armor"
+    ],
+    "903": [
+        "Cloak - 3 Res"
+    ],
+    "904": [
+        "Gloves - 5 Agi",
+        "Boots - 5 Agi"
+    ],
+    "905": [
+        "Bracers - 5 Int"
+    ],
+    "906": [
+        "Gloves - 5 Mining"
+    ],
+    "907": [
+        "Bracers - 7 Spi",
+        "Shield - 7 Spi"
+    ],
+    "908": [
+        "Chest - 50 HP"
+    ],
+    "909": [
+        "Gloves - 5 Herb"
+    ],
+    "910": [
+        "Cloak - Stealth"
+    ],
+    "911": [
+        "Boots - Minor Speed"
+    ],
+    "913": [
+        "Chest - 65 Mana"
+    ],
+    "923": [
+        "Bracers - 3 Def"
+    ],
+    "924": [
+        "Bracers - 1 Def"
+    ],
+    "925": [
+        "Bracers - 2 Def"
+    ],
+    "927": [
+        "Bracers - 7 Str",
+        "Gloves - 7 Str"
+    ],
+    "928": [
+        "Chest - 3 Stats"
+    ],
+    "929": [
+        "Bracers - 7 Sta",
+        "Boots - 7 Sta",
+        "Shield - 7 Sta"
+    ],
+    "930": [
+        "Gloves - Mount Speed"
+    ],
+    "943": [
+        "Weapon - 3 Dmg",
+        "Weapon - 3 Dmg"
+    ],
+    "963": [
+        "Weapon - 7 Dmg"
+    ],
+    "1704": [
+        "Shield - Thor Spike"
+    ],
+    "1843": [
+        "40 Armor"
+    ],
+    "1885": [
+        "Bracers - 9 Str"
+    ],
+    "1886": [
+        "Bracers - 9 Sta"
+    ],
+    "1887": [
+        "Gloves - 7 Agi",
+        "Boots - 7 Agi"
+    ],
+    "1889": [
+        "Cloak - 70 Armor"
+    ],
+    "1891": [
+        "Chest - 4 Stats"
+    ],
+    "1893": [
+        "Chest - 100 Mana"
+    ],
+    "1896": [
+        "Weapon - 9 Dmg"
+    ],
+    "1898": [
+        "Weapon - Lifesteal"
+    ],
+    "1899": [
+        "Weapon - Unholy"
+    ],
+    "1900": [
+        "Weapon - Crusader"
+    ],
+    "1903": [
+        "Weapon - 9 Spi"
+    ],
+    "1904": [
+        "Weapon - 9 Int"
+    ],
+    "2443": [
+        "Weapon - 7 Frost"
+    ],
+    "2463": [
+        "Cloak - 7 FR"
+    ],
+    "2503": [
+        "3 Def"
+    ],
+    "2568": [
+        "Weapon - 22 Int"
+    ],
+    "2583": [
+        "Head\/Legs - ZG"
+    ],
+    "2584": [
+        "Head\/Legs - ZG"
+    ],
+    "2585": [
+        "Head\/Legs - ZG"
+    ],
+    "2586": [
+        "Head\/Legs - ZG"
+    ],
+    "2587": [
+        "Head\/Legs - ZG"
+    ],
+    "2588": [
+        "Head\/Legs - ZG"
+    ],
+    "2589": [
+        "Head\/Legs - ZG"
+    ],
+    "2590": [
+        "Head\/Legs - ZG"
+    ],
+    "2591": [
+        "Head\/Legs - ZG"
+    ],
+    "2604": [
+        "Shoulder - ZG"
+    ],
+    "2605": [
+        "Shoulder - ZG"
+    ],
+    "2606": [
+        "Shoulder - ZG"
+    ],
+    "2646": [
+        "Weapon - 25 Agi"
+    ],
+    "2669": [
+        "Weapon - 40SP"
+    ],
+    "2745": [
+        "Legs - Silver Thread"
+    ],
+    "2747": [
+        "Legs - Mystic Thread"
+    ],
+    "2792": [
+        "Knothide Kit"
+    ],
+    "2841": [
+        "Heavy Knothide Kit",
+        "Heavy Knothide Kit",
+        "Heavy Knothide Kit",
+        "Heavy Knothide Kit",
+        "Heavy Knothide Kit"
+    ],
+    "2934": [
+        "Gloves - Blasting"
+    ],
+    "2938": [
+        "Cloak - Spell Pen"
+    ],
+    "2977": [
+        "Shoulder - Aldor Hon"
+    ],
+    "2979": [
+        "Shoulder - Aldor Hon"
+    ],
+    "2981": [
+        "Shoulder - Aldor Hon"
+    ],
+    "2983": [
+        "Shoulder - Aldor Hon"
+    ],
+    "2990": [
+        "Shoulder - Scryer Hon"
+    ],
+    "2992": [
+        "Shoulder - Scryer Hon"
+    ],
+    "2994": [
+        "Shoulder - Scryer Hon"
+    ],
+    "2996": [
+        "Shoulder - Scryer Hon"
+    ],
+    "3010": [
+        "Legs - 40AP\/10Crit"
+    ]
+}

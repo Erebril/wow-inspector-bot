@@ -8,7 +8,7 @@ require_once __DIR__ . '/ItemCacheManager.php';
 // Cargamos el nuevo archivo de comando
 require_once __DIR__ . '/src/Commands/GearScoreCommand.php';
 require_once __DIR__ . '/src/Commands/LogConsumablesCommand.php';
-require_once __DIR__ . '/src/Commands/GearIssueCommand.php';
+require_once __DIR__ . '/src/Commands/EnchantsIssueCommand.php';
 
 use Discord\Discord;
 use Discord\Parts\Interactions\Interaction;
@@ -17,7 +17,7 @@ use Discord\WebSockets\Event;
 use Dotenv\Dotenv;
 use App\Commands\GearScoreCommand; // Importamos el namespace del comando
 use App\Commands\LogConsumablesCommand;
-use App\Commands\GearIssueCommand;
+use App\Commands\EnchantsIssueCommand;
 
 // 1. Cargar configuración de entorno
 $dotenv = Dotenv::createImmutable(__DIR__);
@@ -49,8 +49,8 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
             LogConsumablesCommand::run($interaction);
             break;
 
-        case 'gearissue':
-            GearIssueCommand::run($interaction);
+        case 'enchants':
+            EnchantsIssueCommand::run($interaction);
             break;
 
         default:
