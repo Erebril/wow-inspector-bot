@@ -12,7 +12,7 @@ class ReportCommand
         // false => mensaje visible para todos (no ephemereal)
         $interaction->acknowledgeWithResponse(false)->then(function () use ($interaction) {
             try {
-                $logUrl = $interaction->data->options['url']->value;
+                $logUrl = self::normalizeLogUrl((string)$interaction->data->options['url']->value);
                 $result = self::analyzeReportByUrl($logUrl);
 
                 $summary = $result['summary'];
@@ -30,10 +30,13 @@ class ReportCommand
                         "⚙️ Enchants: ❌ sin enchant **{$enchants['totals']['missingEnchants']}** | ⚠️ malos **{$enchants['totals']['badEnchants']}**\n" .
                         "💎 Gemas: ⚠️ < rare **{$gems['totals']['badGems']}** | 🔶 meta issues **{$gems['totals']['metaIssues']}**\n" .
                         "🧪 Consumibles: ✅ con **{$consumables['totals']['withConsumables']}** | ❌ sin **{$consumables['totals']['withoutConsumables']}**",
-                    'url' => $logUrl,
                     'color' => $potentialColor,
                     'footer' => ['text' => 'WarcraftLogs API v2 | Reporte consolidado'],
                 ];
+
+                if (filter_var($logUrl, FILTER_VALIDATE_URL)) {
+                    $embed['url'] = $logUrl;
+                }
 
                 $followUps = [];
                 $followUps[] = self::buildEnchantsSection($enchants);
@@ -59,6 +62,20 @@ class ReportCommand
                 );
             }
         });
+    }
+
+    private static function normalizeLogUrl(string $input): string
+    {
+        $url = trim($input);
+        if ($url === '') {
+            return $url;
+        }
+
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . ltrim($url, '/');
+        }
+
+        return $url;
     }
 
     public static function analyzeReportByUrl(string $logUrl): array
