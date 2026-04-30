@@ -75,6 +75,19 @@ $commands = [
                 "required" => true
             ]
         ]
+    ],
+    [
+        "name" => "report",
+        "description" => "Reporte completo del log: potencial, gems, enchants y consumibles",
+        "default_member_permissions" => "8",
+        "options" => [
+            [
+                "name" => "url",
+                "description" => "Enlace completo al reporte de WarcraftLogs",
+                "type" => 3,
+                "required" => true
+            ]
+        ]
     ]
 ];
 

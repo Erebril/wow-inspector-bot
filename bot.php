@@ -10,6 +10,7 @@ require_once __DIR__ . '/src/Commands/GearScoreCommand.php';
 require_once __DIR__ . '/src/Commands/LogConsumablesCommand.php';
 require_once __DIR__ . '/src/Commands/EnchantsIssueCommand.php';
 require_once __DIR__ . '/src/Commands/GemsIssueCommand.php';
+require_once __DIR__ . '/src/Commands/ReportCommand.php';
 
 use Discord\Discord;
 use Discord\Parts\Interactions\Interaction;
@@ -20,6 +21,7 @@ use App\Commands\GearScoreCommand; // Importamos el namespace del comando
 use App\Commands\LogConsumablesCommand;
 use App\Commands\EnchantsIssueCommand;
 use App\Commands\GemsIssueCommand;
+use App\Commands\ReportCommand;
 
 // 1. Cargar configuración de entorno
 $dotenv = Dotenv::createImmutable(__DIR__);
@@ -57,6 +59,10 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
 
         case 'gems':
             GemsIssueCommand::run($interaction);
+            break;
+
+        case 'report':
+            ReportCommand::run($interaction);
             break;
 
         default:
