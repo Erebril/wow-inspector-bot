@@ -23,7 +23,7 @@ class ReportCommand
                 $potentialColor = $summary['potential'] < 85.0 ? 0xe67e22 : 0x2ecc71;
 
                 $embed = [
-                    'title' => 'Reporte Completo: ' . ($summary['title'] ?? 'Sin titulo'),
+                    'title' => '# Reporte: ' . ($summary['title'] ?? 'Sin titulo'),
                     'description' =>
                         "📈 Potencial del raid: **{$summary['potentialFormatted']}**\n" .
                         "Faltantes totales: **{$summary['missingTotal']}**\n\n" .
@@ -150,7 +150,7 @@ class ReportCommand
     private static function buildEnchantsSection(array $enchants): string
     {
         $lines = [];
-        $lines[] = '=== ENCHANTS ===';
+        $lines[] = '# === ENCHANTS ===';
         $lines[] = 'Total: ' . $enchants['totalPlayers'] .
             ' | OK: ' . max(0, $enchants['totalPlayers'] - $enchants['playersWithIssuesCount']) .
             ' | Issues: ' . $enchants['playersWithIssuesCount'] .
@@ -184,7 +184,7 @@ class ReportCommand
     private static function buildGemsSection(array $gems): string
     {
         $lines = [];
-        $lines[] = '=== GEMAS ===';
+        $lines[] = '# === GEMAS ===';
         $lines[] = 'Total: ' . $gems['totalPlayers'] .
             ' | OK: ' . max(0, $gems['totalPlayers'] - $gems['playersWithIssuesCount']) .
             ' | Issues: ' . $gems['playersWithIssuesCount'] .
@@ -218,7 +218,7 @@ class ReportCommand
     private static function buildConsumablesSection(array $consumables): string
     {
         $lines = [];
-        $lines[] = '=== CONSUMIBLES ===';
+        $lines[] = '# === CONSUMIBLES ===';
         $lines[] = 'Total: ' . $consumables['totals']['totalPlayers'] .
             ' | Con consumibles: ' . $consumables['totals']['withConsumables'] .
             ' | Sin consumibles: ' . $consumables['totals']['withoutConsumables'];
