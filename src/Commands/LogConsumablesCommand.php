@@ -14,9 +14,13 @@ class LogConsumablesCommand
     {
         if (self::$tbcSpellIds === null) {
             $path = __DIR__ . '/../../consumables.json';
-            self::$tbcSpellIds = file_exists($path)
+            $data = file_exists($path)
                 ? (json_decode(file_get_contents($path), true) ?? [])
                 : [];
+            self::$tbcSpellIds = [];
+            foreach ($data as $group) {
+                self::$tbcSpellIds += $group;
+            }
         }
         return self::$tbcSpellIds;
     }
@@ -147,6 +151,9 @@ class LogConsumablesCommand
             $auras = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
 
             foreach ($auras as $aura) {
+                if (!isset($aura['id'])) {
+                    continue;
+                }
                 $pId = $aura['id'];
                 if (isset($playerResults[$pId])) {
                     $playerResults[$pId]['buffs'][] = $spellName;

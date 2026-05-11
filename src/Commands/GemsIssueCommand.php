@@ -10,6 +10,7 @@ class GemsIssueCommand
 {
     private static ?array $excludeGear = null;
 
+    // IDs de gemas meta en TBC.
     private const META_GEM_IDS = [
         '25890', '25893', '25894', '25895', '25896', '25897', '25898', '25899',
         '25901', '28556', '28557', '32409', '32410', '32640', '32641', '34220',
@@ -63,11 +64,12 @@ class GemsIssueCommand
         '32201', '32202', '32203', '32211', '32212', '32213', '32214', '32215', '32216', '32222', '32223',
         '32224', '32225', '32226', '32634', '32635', '32636', '32639', '32735', '32833', '32836', '33135',
         '33633', '33782', '34256', '34831', '35318', '35707', '35758', '35759', '31116', '31117', '31118',
-        '23104',
+        '23104','27809',
     ];
 
     private static function getExcludeGear(): array
     {
+        // Cache en memoria para no leer el JSON en cada jugador/item.
         if (self::$excludeGear === null) {
             $path = __DIR__ . '/../../exclude_gear.json';
             self::$excludeGear = file_exists($path)
@@ -114,6 +116,7 @@ class GemsIssueCommand
                     $issuesByRole[$roleKey][] = "• **{$entry['name']}**: {$line}";
                 }
 
+                // Embed compacto con resumen global; el detalle via follow-up.
                 $fightNote = isset($report['_fightUsed'])
                     ? "\n⚔️ Pelea analizada: **{$report['_fightUsed']}**"
                     : '';
@@ -134,6 +137,7 @@ class GemsIssueCommand
                 if ($playersWithIssuesCount === 0) {
                     $followUpMessages[] = '✅ No se detectaron issues de gemas en esta pelea.';
                 } else {
+                    // Separa por rol y trocea para respetar límites de Discord.
                     foreach (['DPS', 'HEALERS', 'TANKS'] as $role) {
                         $lines = $issuesByRole[$role] ?? [];
                         if (empty($lines)) {
@@ -171,12 +175,14 @@ class GemsIssueCommand
 
     public static function analyzeReportByUrl(string $logUrl): array
     {
+        // Extrae el report ID desde la URL de WarcraftLogs.
         preg_match('/reports\/([a-zA-Z0-9]+)/', $logUrl, $matches);
         if (!$matches) {
             throw new \Exception('URL de log no válida.');
         }
         $reportId = $matches[1];
 
+        // OAuth client-credentials para llamar GraphQL v2.
         $httpClient = new Client(['timeout' => 45.0]);
         $tokenResponse = $httpClient->post('https://www.warcraftlogs.com/oauth/token', [
             'form_params' => [
@@ -208,6 +214,7 @@ class GemsIssueCommand
         }
 
         $report = $dataJson['data']['reportData']['report'];
+        // Selecciona una pelea representativa del reporte (prioriza kill de boss).
         $selectedFight = self::selectFightForAnalysis($report['fights'] ?? []);
 
         $query2 = 'query($reportId: String!, $startTime: Float!, $endTime: Float!) {
@@ -251,6 +258,7 @@ class GemsIssueCommand
         ];
 
         foreach ($roles as $role) {
+            // Analiza cada jugador de cada rol y acumula métricas globales.
             foreach ($playerDetails[$role] ?? [] as $player) {
                 $totalPlayers++;
                 $analysis = self::analyzePlayer($player, $role);
@@ -291,6 +299,7 @@ class GemsIssueCommand
         $redGemsFound = 0;
         $yellowGemsFound = 0;
 
+        // Recorre el gear, detecta calidad de gemas y cuenta colores para validar meta.
         foreach ($gear as $item) {
             if (!is_array($item)) {
                 continue;
@@ -336,6 +345,7 @@ class GemsIssueCommand
             }
         }
 
+        // Regla especial: si el casco tiene sockets, se espera meta o meta activa.
         if ($headHasGems && $metaGemId === null) {
             $metaIssues[] = 'Head: sin meta';
         } elseif ($metaGemId !== null && !self::isMetaGemActive($metaGemId, $redGemsFound, $blueGemsFound, $yellowGemsFound)) {
@@ -358,6 +368,7 @@ class GemsIssueCommand
 
     private static function isGemBelowRare(string $gemId, int $itemLevel): bool
     {
+        // Gemas vacías o sin ID no cuentan como issue.
         if ($gemId === '' || $gemId === '0') {
             return false;
         }
@@ -410,6 +421,7 @@ class GemsIssueCommand
 
     private static function isMetaGemActive(string $metaGemId, int $redGemsFound, int $blueGemsFound, int $yellowGemsFound): bool
     {
+        // Reglas de activación por ID de meta (TBC).
         if ($metaGemId === '25896' && $blueGemsFound > 2) {
             return true;
         }
@@ -449,6 +461,7 @@ class GemsIssueCommand
 
     private static function selectFightForAnalysis(array $fights): ?array
     {
+        // 1) Busca un kill de boss, excluyendo encuentros no representativos.
         $skipNames = ['high king maulgar', 'maulgar'];
         foreach ($fights as $fight) {
             if (empty($fight['encounterID']) || !($fight['kill'] ?? false)) {
@@ -469,6 +482,7 @@ class GemsIssueCommand
             }
         }
 
+        // 2) Fallback: cualquier encounter con encounterID.
         foreach ($fights as $fight) {
             if (!empty($fight['encounterID'])) {
                 return $fight;
@@ -507,6 +521,7 @@ class GemsIssueCommand
 
     private static function chunkLinesForDiscord(array $lines, int $maxChars = 1600): array
     {
+        // Agrupa líneas sin superar el límite de caracteres por mensaje.
         $chunks = [];
         $current = '';
 
