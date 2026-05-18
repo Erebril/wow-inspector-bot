@@ -224,6 +224,17 @@ class ReportCommand
             ' | Sin consumibles: ' . $consumables['totals']['withoutConsumables'];
         $lines[] = '';
 
+        $lines[] = 'Con consumibles:';
+        if (empty($consumables['playersWithConsumables'])) {
+            $lines[] = '- Ninguno.';
+        } else {
+            foreach ($consumables['playersWithConsumables'] as $player) {
+                $buffs = implode(', ', $player['buffs']);
+                $lines[] = '- ' . $player['name'] . ': ' . $buffs;
+            }
+        }
+
+        $lines[] = '';
         $lines[] = 'Sin consumibles:';
         if (empty($consumables['playersWithoutConsumables'])) {
             $lines[] = '- Todos tienen consumibles.';

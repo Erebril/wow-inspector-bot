@@ -167,8 +167,8 @@ class EnchantsIssueCommand
         $report = $dataJson['data']['reportData']['report'];
         $fights = $report['fights'] ?? [];
 
-        // Buscar la primera pelea que NO sea High King Maulgar y que sea un kill de boss
-        $skipNames = ['high king maulgar', 'maulgar'];
+        // Buscar la primera pelea que NO sea High King Maulgar o Hydross y que sea un kill de boss
+        $skipNames = ['high king maulgar', 'maulgar', 'hydross', 'hydross the unstable'];
         $selectedFight = null;
         foreach ($fights as $fight) {
             if (empty($fight['encounterID'])) continue; // solo boss fights

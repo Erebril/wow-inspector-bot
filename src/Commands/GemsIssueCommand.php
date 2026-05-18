@@ -462,7 +462,7 @@ class GemsIssueCommand
     private static function selectFightForAnalysis(array $fights): ?array
     {
         // 1) Busca un kill de boss, excluyendo encuentros no representativos.
-        $skipNames = ['high king maulgar', 'maulgar'];
+        $skipNames = ['high king maulgar', 'maulgar', 'hydross', 'hydross the unstable'];
         foreach ($fights as $fight) {
             if (empty($fight['encounterID']) || !($fight['kill'] ?? false)) {
                 continue;
