@@ -18,7 +18,10 @@ class LogConsumablesCommand
                 ? (json_decode(file_get_contents($path), true) ?? [])
                 : [];
             self::$tbcSpellIds = [];
-            foreach ($data as $group) {
+            foreach ($data as $groupName => $group) {
+                if ($groupName === 'pociones') {
+                    continue;
+                }
                 self::$tbcSpellIds += $group;
             }
         }
@@ -36,15 +39,15 @@ class LogConsumablesCommand
                 $playersWith = $result['playersWithConsumables'];
                 $playersWithout = $result['playersWithoutConsumables'];
 
-                $with = '';
+                $withLines = [];
                 foreach ($playersWith as $p) {
                     $buffs = implode(', ', $p['buffs']);
-                    $with .= "• **{$p['name']}**: `{$buffs}`\n";
+                    $withLines[] = "• **{$p['name']}**: `{$buffs}`";
                 }
 
-                $without = '';
+                $withoutLines = [];
                 foreach ($playersWithout as $name) {
-                    $without .= "• **{$name}**\n";
+                    $withoutLines[] = "• **{$name}**";
                 }
 
                 $embed = [
@@ -56,19 +59,70 @@ class LogConsumablesCommand
                     'url' => $logUrl,
                     'color' => ($totals['withoutConsumables'] > 0) ? 0xe74c3c : 0x2ecc71,
                     'fields' => [
-                        ['name' => "✅ PREPARADOS ({$totals['withConsumables']})", 'value' => $with ?: "Nadie.", 'inline' => false],
-                        ['name' => "❌ SIN NADA ({$totals['withoutConsumables']})", 'value' => $without ?: "¡Todos listos!", 'inline' => false]
+                        ['name' => "✅ PREPARADOS ({$totals['withConsumables']})", 'value' => empty($withLines) ? 'Nadie.' : 'Los detalles se envían en mensajes separados.', 'inline' => false],
+                        ['name' => "❌ SIN NADA ({$totals['withoutConsumables']})", 'value' => empty($withoutLines) ? '¡Todos listos!' : 'Los detalles se envían en mensajes separados.', 'inline' => false]
                     ],
                     'footer' => ['text' => "Solo incluye jugadores con actividad (DPS/Heal)"]
                 ];
 
-                $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed));
+                $followUpMessages = [];
+                if (!empty($withLines)) {
+                    foreach (self::chunkLinesForDiscord($withLines, 1600) as $idx => $chunk) {
+                        $title = "✅ PREPARADOS ({$totals['withConsumables']})";
+                        if ($idx > 0) {
+                            $title .= " (parte " . ($idx + 1) . ")";
+                        }
+                        $followUpMessages[] = $title . "\n" . $chunk;
+                    }
+                }
+                if (!empty($withoutLines)) {
+                    foreach (self::chunkLinesForDiscord($withoutLines, 1600) as $idx => $chunk) {
+                        $title = "❌ SIN NADA ({$totals['withoutConsumables']})";
+                        if ($idx > 0) {
+                            $title .= " (parte " . ($idx + 1) . ")";
+                        }
+                        $followUpMessages[] = $title . "\n" . $chunk;
+                    }
+                }
+
+                $interaction->updateOriginalResponse(MessageBuilder::new()->addEmbed($embed))->then(function () use ($interaction, $followUpMessages) {
+                    foreach ($followUpMessages as $content) {
+                        $interaction->sendFollowUpMessage(MessageBuilder::new()->setContent($content), true);
+                    }
+                });
             } catch (\Exception $e) {
                 $interaction->updateOriginalResponse(MessageBuilder::new()->setContent("❌ Error: " . $e->getMessage()));
                 //save error log
                 file_put_contents(__DIR__ . '/../../logs/consumables_errors.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
             }
         });
+    }
+
+    private static function chunkLinesForDiscord(array $lines, int $maxChars = 1600): array
+    {
+        $chunks = [];
+        $current = '';
+
+        foreach ($lines as $line) {
+            $candidate = $current === '' ? $line : ($current . "\n" . $line);
+            if (strlen($candidate) > $maxChars) {
+                if ($current !== '') {
+                    $chunks[] = $current;
+                    $current = $line;
+                } else {
+                    $chunks[] = substr($line, 0, $maxChars - 3) . '...';
+                    $current = '';
+                }
+            } else {
+                $current = $candidate;
+            }
+        }
+
+        if ($current !== '') {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
     }
 
     public static function analyzeReportByUrl(string $logUrl): array

@@ -9,7 +9,7 @@ use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
-$testUrl = $argv[1] ?? 'https://fresh.warcraftlogs.com/reports/Btw3kAXn2hxgZFHY';
+$testUrl = $argv[1] ?? 'https://fresh.warcraftlogs.com/reports/7m3THzXG1qhQryj2';
 
 try {
     $result = LogConsumablesCommand::analyzeReportByUrl($testUrl);

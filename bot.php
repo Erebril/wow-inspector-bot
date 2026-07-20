@@ -8,6 +8,7 @@ require_once __DIR__ . '/ItemCacheManager.php';
 // Cargamos el nuevo archivo de comando
 require_once __DIR__ . '/src/Commands/GearScoreCommand.php';
 require_once __DIR__ . '/src/Commands/LogConsumablesCommand.php';
+require_once __DIR__ . '/src/Commands/PotionsCommand.php';
 require_once __DIR__ . '/src/Commands/EnchantsIssueCommand.php';
 require_once __DIR__ . '/src/Commands/GemsIssueCommand.php';
 require_once __DIR__ . '/src/Commands/ReportCommand.php';
@@ -19,6 +20,7 @@ use Discord\WebSockets\Event;
 use Dotenv\Dotenv;
 use App\Commands\GearScoreCommand; // Importamos el namespace del comando
 use App\Commands\LogConsumablesCommand;
+use App\Commands\PotionsCommand;
 use App\Commands\EnchantsIssueCommand;
 use App\Commands\GemsIssueCommand;
 use App\Commands\ReportCommand;
@@ -51,6 +53,10 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Disc
         // Aquí podrás añadir más casos fácilmente en el futuro
         case 'consumibles': // Nuevo comando
             LogConsumablesCommand::run($interaction);
+            break;
+
+        case 'pociones':
+            PotionsCommand::run($interaction);
             break;
 
         case 'enchants':

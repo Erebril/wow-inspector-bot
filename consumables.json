@@ -28,6 +28,11 @@
         "11406": "🧴 Demonslaying",
         "11371": "⚠️ Gift of Arthas",
         "17538": "⚠️ Mongoose",
-        "17539": "⚠️ G. Arcane Elixir"
+        "17539": "⚠️ G. Arcane Elixir",
+        "17627": "🧪 Distilled Wisdom"
+    },
+    "pociones": {
+        "28507" : "🧪 Haste",
+        "28508" : "🧪 Destruction"
     }
 }
