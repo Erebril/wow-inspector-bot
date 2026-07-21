@@ -32,7 +32,10 @@
         "17627": "🧪 Distilled Wisdom"
     },
     "pociones": {
-        "28507" : "🧪 Haste",
-        "28508" : "🧪 Destruction"
+        "28507" : "💊 Haste",
+        "28508" : "🔋 Destruction",
+        "28726" : "🥑 Semilla",
+        "27869" : "®️ D. Rune",
+        "16666" : "®️ D. Rune"        
     }
 }

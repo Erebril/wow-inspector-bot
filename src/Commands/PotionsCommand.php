@@ -114,59 +114,71 @@ class PotionsCommand
 
         $report = $dataJson['data']['reportData']['report'];
 
-        $activeDpsIds = [];
+        // Collect active actor IDs from DPS and HPS tables (raid participants)
+        $activeIds = [];
         foreach ($report['dps']['data']['entries'] ?? [] as $entry) {
-            $activeDpsIds[] = $entry['id'];
+            $activeIds[] = $entry['id'];
         }
-        $activeDpsIds = array_unique($activeDpsIds);
+        foreach ($report['hps']['data']['entries'] ?? [] as $entry) {
+            $activeIds[] = $entry['id'];
+        }
+        $activeIds = array_unique($activeIds);
 
         $players = [];
         foreach ($report['masterData']['actors'] as $actor) {
-            if (in_array($actor['id'], $activeDpsIds, true)) {
-                $players[$actor['id']] = [
-                    'name' => $actor['name'],
-                    'potionCounts' => [],
-                ];
-            }
+            $players[$actor['id']] = [
+                'name' => $actor['name'],
+                'potionCounts' => [],
+            ];
         }
 
         foreach (self::getPotionSpellIds() as $spellId => $spellName) {
-            $auraQuery = 'query($reportId: String!, $abilityId: Float!) {
+            $abilityQuery = 'query($reportId: String!, $abilityId: Float!) {
                 reportData {
                     report(code: $reportId) {
-                        table(dataType: Buffs, startTime: 0, endTime: 9999999999999, abilityID: $abilityId)
+                        table(dataType: Casts, startTime: 0, endTime: 9999999999999, abilityID: $abilityId)
                     }
                 }
             }';
 
-            $auraResponse = $httpClient->post('https://www.warcraftlogs.com/api/v2/client', [
+            $abilityResponse = $httpClient->post('https://www.warcraftlogs.com/api/v2/client', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
-                'json' => ['query' => $auraQuery, 'variables' => ['reportId' => $reportId, 'abilityId' => (float) $spellId]],
+                'json' => ['query' => $abilityQuery, 'variables' => ['reportId' => $reportId, 'abilityId' => (float) $spellId]],
             ]);
 
-            $auraData = json_decode($auraResponse->getBody(), true);
-            if (!empty($auraData['errors'])) {
-                $firstError = $auraData['errors'][0]['message'] ?? 'Error desconocido en WarcraftLogs.';
+            $abilityData = json_decode($abilityResponse->getBody(), true);
+            if (!empty($abilityData['errors'])) {
+                $firstError = $abilityData['errors'][0]['message'] ?? 'Error desconocido en WarcraftLogs.';
                 throw new \Exception($firstError);
             }
 
-            $auras = $auraData['data']['reportData']['report']['table']['data']['auras'] ?? [];
-            foreach ($auras as $aura) {
-                if (!isset($aura['id'])) {
+            $tableData = $abilityData['data']['reportData']['report']['table']['data'] ?? [];
+
+            $entries = $tableData['casts'] ?? $tableData['entries'] ?? $tableData['auras'] ?? [];
+            $isAuraFormat = isset($tableData['auras']);
+
+            foreach ($entries as $entry) {
+                $playerId = $entry['id'] ?? $entry['sourceID'] ?? $entry['source'] ?? null;
+                if ($playerId === null) {
                     continue;
                 }
 
-                $playerId = $aura['id'];
                 if (!isset($players[$playerId])) {
                     continue;
                 }
 
-                $count = (int)($aura['totalUses'] ?? 0);
+                $rawCount = $entry['total'] ?? $entry['totalCasts'] ?? $entry['totalUses'] ?? $entry['uses'] ?? 0;
+                $count = (int)$rawCount;
                 if ($count > 0) {
                     $players[$playerId]['potionCounts'][$spellName] = $count;
                 }
             }
         }
+
+        // Keep only players who are raid participants or who used a potion (non-empty counts)
+        $players = array_filter($players, function ($p, $id) use ($activeIds) {
+            return !empty($p['potionCounts']) || in_array($id, $activeIds, true);
+        }, ARRAY_FILTER_USE_BOTH);
 
         uasort($players, function ($a, $b) {
             $sumA = array_sum($a['potionCounts']);
