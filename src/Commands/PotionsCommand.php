@@ -37,6 +37,11 @@ class PotionsCommand
                 $report = $result['report'];
                 $players = $result['players'];
 
+                // Defensive: keep only players with detected potion uses for the embed
+                $players = array_values(array_filter($players, function ($p) {
+                    return !empty($p['potionCounts']);
+                }));
+
                 $lines = [];
                 foreach ($players as $player) {
                     $details = [];
@@ -50,7 +55,7 @@ class PotionsCommand
                 $embed = [
                     'title' => 'Pociones: ' . $report['title'],
                     'description' => "📊 **Resumen de pociones por jugador**\n" .
-                        "Total jugadores analizados: **{$result['totals']['totalPlayers']}**",
+                        "Total jugadores con pociones: **" . count($players) . "**",
                     'url' => $logUrl,
                     'color' => 0x3498db,
                     'fields' => [
@@ -175,9 +180,10 @@ class PotionsCommand
             }
         }
 
-        // Keep only players who are raid participants or who used a potion (non-empty counts)
+        // Keep only players who are raid participants (did DPS or HPS)
+        // and who actually used at least one potion
         $players = array_filter($players, function ($p, $id) use ($activeIds) {
-            return !empty($p['potionCounts']) || in_array($id, $activeIds, true);
+            return in_array($id, $activeIds, true) && !empty($p['potionCounts']);
         }, ARRAY_FILTER_USE_BOTH);
 
         uasort($players, function ($a, $b) {
